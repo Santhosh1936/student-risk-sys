@@ -1,0 +1,53 @@
+# ── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environments ───────────────────────────────────────────────────
+venv/
+venv311/
+.venv/
+env/
+
+# ── Environment files — NEVER commit API keys or secrets ──────────────────
+.env
+.env.*
+!.env.example
+
+# ── Database files ─────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Uploaded files (user data) ─────────────────────────────────────────────
+backend/uploads/
+
+# ── Node / React ───────────────────────────────────────────────────────────
+node_modules/
+frontend/build/
+npm-debug.log*
+yarn-error.log
+
+# ── OS files ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor ─────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Test / diagnostic scripts (not production code) ────────────────────────
+test_*.py
+test_*.ps1
+verify_*.ps1
+run_goal*.ps1
+*_diag.py

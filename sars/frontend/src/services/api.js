@@ -41,9 +41,12 @@ export const authAPI = {
   me:       ()     => api.get("/auth/me"),
 };
 
-// ── Student endpoints (populated further in Goals 2-4) ─────────────────────
+// ── Student endpoints ───────────────────────────────────────────────────────
 export const studentAPI = {
-  getProfile: () => api.get("/student/profile"),
+  getProfile:      ()         => api.get("/student/profile"),
+  getSemesters:    ()         => api.get("/student/semesters"),
+  uploadMarksheet: (formData) => api.post("/student/upload-marksheet", formData, { timeout: 120000 }),
+  debugExtract:    (formData) => api.post("/student/debug-extract",    formData, { timeout: 120000 }),
 };
 
 // ── Teacher endpoints (populated further in Goal 5) ────────────────────────

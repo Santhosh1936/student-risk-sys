@@ -8,5 +8,6 @@ passlib==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.9
 pymupdf==1.24.1
-pytesseract==0.3.10
 Pillow==10.3.0
+google-generativeai==0.7.2
+requests==2.31.0
