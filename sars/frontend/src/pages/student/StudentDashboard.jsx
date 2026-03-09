@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import UploadMarksPage from "./UploadMarksPage";
 import SemestersPage from "./SemestersPage";
-
+import RiskPage from "./RiskPage";import AdvisoryPage from './AdvisoryPage';
 // ── Nav configuration ─────────────────────────────────────────────────────
 const NAV = [
   { label: "Overview",     icon: "🏠",  path: "/student/overview" },
@@ -25,8 +25,8 @@ export default function StudentDashboard() {
         <Route path="overview"    element={<Overview />} />
         <Route path="upload"      element={<UploadMarksPage />} />
         <Route path="performance" element={<SemestersPage />} />
-        <Route path="risk"        element={<MyRisk />} />
-        <Route path="advisory"    element={<Advisory />} />
+        <Route path="risk"        element={<RiskPage />} />
+        <Route path="advisory"    element={<AdvisoryPage />} />
         <Route path="*"           element={<Navigate to="/student/overview" replace />} />
       </Routes>
     </DashboardLayout>
@@ -63,17 +63,22 @@ function Overview() {
   const [profile, setProfile]     = useState(null);
   const [semesters, setSemesters] = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [riskData, setRiskData]   = useState(null);
 
   useEffect(() => {
     Promise.all([
       studentAPI.getProfile().then(r => setProfile(r.data)).catch(() => {}),
       api.get('/student/semesters').then(r => setSemesters(r.data)).catch(() => {}),
+      api.get('/student/risk-score').then(r => setRiskData(r.data)).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
   const totalBacklogs = semesters
     .flatMap(s => s.subjects || [])
     .filter(sub => sub.is_backlog).length;
+
+  // Use profile CGPA if available, fall back to value computed by risk engine
+  const displayCgpa = profile?.cgpa ?? riskData?.factor_breakdown?.cgpa;
 
   return (
     <div className="fade-up">
@@ -91,15 +96,24 @@ function Overview() {
       <div style={grid}>
         <StatCard
           label="Current CGPA"
-          value={loading ? "—" : (profile?.cgpa != null ? profile.cgpa.toFixed(2) : "—")}
-          sub={profile?.cgpa != null ? "Cumulative GPA" : "Upload marks to compute"}
+          value={loading ? "—" : (displayCgpa != null ? Number(displayCgpa).toFixed(2) : "—")}
+          sub={displayCgpa != null ? "Cumulative GPA" : "Upload marks to compute"}
           icon="◈" color="#38bdf8"
         />
         <StatCard
           label="Risk Score"
-          value="—"
-          sub="Computed in Goal 3"
-          icon="◉" color="#fb923c"
+          value={loading ? "—" : (riskData?.sars_score != null ? riskData.sars_score.toFixed(1) : "—")}
+          sub={riskData?.risk_level ?? "Not computed"}
+          icon={riskData?.risk_level === 'HIGH' ? '🔴'
+              : riskData?.risk_level === 'MODERATE' ? '🟠'
+              : riskData?.risk_level === 'WATCH' ? '🟡'
+              : riskData?.risk_level === 'LOW' ? '🟢'
+              : '◉'}
+          color={riskData?.risk_level === 'HIGH' ? '#f87171'
+               : riskData?.risk_level === 'MODERATE' ? '#fb923c'
+               : riskData?.risk_level === 'WATCH' ? '#fbbf24'
+               : riskData?.risk_level === 'LOW' ? '#34d399'
+               : '#fb923c'}
         />
         <StatCard
           label="Semesters Uploaded"

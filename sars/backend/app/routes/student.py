@@ -8,6 +8,11 @@ from ..database import get_db
 from ..services.dependencies import require_student
 from ..models.models import User, Student, SemesterRecord, SubjectGrade
 from ..services.grade_extractor import extract_from_file, get_gemini_status
+from ..services.risk_engine import compute_risk_score, get_student_risk
+from ..services.advisor import send_message as advisor_send, get_chat_history as advisor_history, mark_data_updated
+
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/student", tags=["Student"])
 
@@ -43,6 +48,10 @@ class SubjectInput(BaseModel):
     result: str = "P"
 
 
+class AdvisorChatRequest(BaseModel):
+    message: str
+
+
 class ConfirmUploadRequest(BaseModel):
     hall_ticket_no: Optional[str] = None
     serial_no: Optional[str] = None
@@ -72,6 +81,19 @@ def get_student_profile(
     db: Session = Depends(get_db)
 ):
     s = db.query(Student).filter(Student.user_id == current_user.id).first()
+
+    # Recompute CGPA from semester records if profile value is stale or missing
+    if s:
+        records = db.query(SemesterRecord).filter(
+            SemesterRecord.student_id == s.id
+        ).all()
+        valid_gpas = [float(r.gpa) for r in records if r.gpa is not None]
+        if valid_gpas:
+            computed_cgpa = round(sum(valid_gpas) / len(valid_gpas), 2)
+            if s.cgpa != computed_cgpa:
+                s.cgpa = computed_cgpa
+                db.commit()
+
     return StudentProfileResponse(
         user_id=current_user.id,
         full_name=current_user.full_name,
@@ -188,6 +210,20 @@ def confirm_marksheet(
 
     db.commit()
 
+    # Auto-compute risk score after grade confirmation
+    try:
+        from ..services.risk_engine import compute_risk_score
+        compute_risk_score(student.id, db)
+    except Exception as e:
+        logger.warning(f"Auto risk computation failed: {e}")
+        # Do not block the confirm response if risk fails
+
+    # Mark chat thread for data refresh after new semester upload
+    try:
+        mark_data_updated(student.id, db)
+    except Exception as e:
+        logger.warning(f"Chat refresh flag failed: {e}")
+
     return {
         "message": f"Semester {data.semester_no} saved successfully.",
         "semester_record_id": record.id,
@@ -231,6 +267,63 @@ def get_student_semesters(
     return result
 
 
+@router.post("/compute-risk")
+def trigger_risk_computation(
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually trigger SARS risk score computation for the logged-in student.
+    Also called automatically after every confirmed grade upload.
+    """
+    student = db.query(Student).filter(
+        Student.user_id == current_user.id
+    ).first()
+    if not student:
+        raise HTTPException(404, "Student profile not found.")
+
+    try:
+        breakdown = compute_risk_score(student.id, db)
+    except Exception as e:
+        raise HTTPException(500, f"Risk computation failed: {e}")
+
+    return {
+        "message": "Risk score computed successfully.",
+        "sars_score": breakdown["sars_score"],
+        "risk_level": breakdown["risk_level"],
+        "confidence": breakdown["confidence"],
+        "factor_breakdown": breakdown,
+    }
+
+
+@router.get("/risk-score")
+def get_risk_score(
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+):
+    """
+    Return the latest stored SARS risk score for the logged-in student.
+    Returns 404 with message if not yet computed.
+    """
+    student = db.query(Student).filter(
+        Student.user_id == current_user.id
+    ).first()
+    if not student:
+        raise HTTPException(404, "Student profile not found.")
+
+    risk = get_student_risk(student.id, db)
+    if not risk:
+        return {
+            "computed": False,
+            "message": "Risk score not yet computed. "
+                       "Upload a semester marksheet to compute it.",
+            "sars_score": None,
+            "risk_level": None,
+        }
+
+    return {"computed": True, **risk}
+
+
 @router.delete("/semesters/{semester_no}")
 def delete_semester(
     semester_no: int,
@@ -254,3 +347,58 @@ def delete_semester(
     db.delete(record)
     db.commit()
     return {"message": f"Semester {semester_no} deleted."}
+
+
+@router.post("/advisor/chat")
+def advisor_chat(
+    request: AdvisorChatRequest,
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+):
+    """
+    Send a message to the AI advisor. Returns AI response.
+    Each student has their own isolated conversation thread.
+    Context is injected automatically on first message.
+    Data refresh is injected automatically after new semester upload.
+    """
+    student = db.query(Student).filter(
+        Student.user_id == current_user.id
+    ).first()
+    if not student:
+        raise HTTPException(404, "Student profile not found.")
+
+    if not request.message or not request.message.strip():
+        raise HTTPException(400, "Message cannot be empty.")
+
+    try:
+        result = advisor_send(
+            student_id=student.id,
+            user_message=request.message.strip(),
+            db=db
+        )
+    except ValueError as e:
+        raise HTTPException(503, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Advisor error: {e}")
+
+    return result
+
+
+@router.get("/advisor/history")
+def advisor_get_history(
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+):
+    """
+    Return full chat history for the logged-in student.
+    Returns only normal messages — context seeds and data
+    refresh messages are hidden from the UI.
+    """
+    student = db.query(Student).filter(
+        Student.user_id == current_user.id
+    ).first()
+    if not student:
+        raise HTTPException(404, "Student profile not found.")
+
+    history = advisor_history(student.id, db)
+    return {"messages": history, "count": len(history)}

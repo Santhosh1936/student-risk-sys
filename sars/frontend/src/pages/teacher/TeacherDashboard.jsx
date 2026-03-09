@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import DashboardLayout from "../../components/DashboardLayout";
 import { teacherAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import RiskMonitorPage from "./RiskMonitorPage";
 
 const NAV = [
   { label: "My Students",    icon: "👥",  path: "/teacher/students" },
@@ -18,7 +19,7 @@ export default function TeacherDashboard() {
       <Routes>
         <Route index             element={<Navigate to="/teacher/students" replace />} />
         <Route path="students"    element={<MyStudents />} />
-        <Route path="risk-monitor" element={<RiskMonitor />} />
+        <Route path="risk-monitor" element={<RiskMonitorPage />} />
         <Route path="interventions" element={<Interventions />} />
         <Route path="analytics"   element={<Analytics />} />
         <Route path="*"           element={<Navigate to="/teacher/students" replace />} />

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -29,6 +30,7 @@ class Student(Base):
     attendance_records = relationship("AttendanceRecord", back_populates="student")
     risk_scores = relationship("RiskScore", back_populates="student")
     advisory_sessions = relationship("AdvisorySession", back_populates="student")
+    chat_thread = relationship("ChatThread", back_populates="student", uselist=False)
 
 class Teacher(Base):
     __tablename__ = "teachers"
@@ -110,3 +112,38 @@ class AdvisorySession(Base):
     response = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     student = relationship("Student", back_populates="advisory_sessions")
+
+
+class ChatThread(Base):
+    __tablename__ = "chat_threads"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    student_id  = Column(Integer, ForeignKey("students.id"),
+                         unique=True, nullable=False)
+    created_at  = Column(DateTime(timezone=True),
+                         default=lambda: datetime.now(timezone.utc))
+    last_active = Column(DateTime(timezone=True),
+                         default=lambda: datetime.now(timezone.utc))
+    data_updated = Column(Boolean, default=False)
+    context_set  = Column(Boolean, default=False)
+
+    student  = relationship("Student", back_populates="chat_thread")
+    messages = relationship("ChatMessage", back_populates="thread",
+                            order_by="ChatMessage.created_at",
+                            cascade="all, delete-orphan")
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    thread_id    = Column(Integer, ForeignKey("chat_threads.id"),
+                          nullable=False)
+    role         = Column(String, nullable=False)   # "user" or "model"
+    content      = Column(Text, nullable=False)
+    created_at   = Column(DateTime(timezone=True),
+                          default=lambda: datetime.now(timezone.utc))
+    message_type = Column(String, default="normal")
+                          # "normal", "context_seed", "data_refresh"
+
+    thread = relationship("ChatThread", back_populates="messages")
