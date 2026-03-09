@@ -13,6 +13,6 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
 
     class Config:
-        env_file = ".env"
+        env_file = os.path.join(_BACKEND_DIR, ".env")
 
 settings = Settings()

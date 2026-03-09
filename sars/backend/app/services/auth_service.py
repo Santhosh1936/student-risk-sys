@@ -2,7 +2,9 @@
 #
 # ALL auth logic lives here — routes stay thin and just call this.
 #
+from __future__ import annotations
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 from jose import JWTError, jwt
 import bcrypt as _bcrypt
 from sqlalchemy.orm import Session
@@ -42,7 +44,7 @@ def create_access_token(data: dict) -> str:
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def decode_token(token: str) -> dict | None:
+def decode_token(token: str) -> Optional[dict]:
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     except JWTError:
@@ -51,10 +53,10 @@ def decode_token(token: str) -> dict | None:
 
 # ── DB helpers ──────────────────────────────────────────────────────────────
 
-def get_user_by_email(db: Session, email: str) -> User | None:
+def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email.lower().strip()).first()
 
-def get_user_by_id(db: Session, user_id: int) -> User | None:
+def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
     return db.query(User).filter(User.id == user_id).first()
 
 def create_user(db: Session, email: str, password: str, role: str,
@@ -71,7 +73,7 @@ def create_user(db: Session, email: str, password: str, role: str,
     db.refresh(user)
     return user
 
-def authenticate_user(db: Session, email: str, password: str) -> User | None:
+def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     user = get_user_by_email(db, email)
     if not user or not verify_password(password, user.password_hash):
         return None

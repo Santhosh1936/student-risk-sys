@@ -1,4 +1,5 @@
 import re
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, field_validator
@@ -53,7 +54,7 @@ class UserResponse(BaseModel):
     email: str
     role: str
     full_name: str
-    roll_number: str | None
+    roll_number: Optional[str] = None
     class Config:
         from_attributes = True
 
