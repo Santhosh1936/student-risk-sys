@@ -18,7 +18,7 @@ from io import BytesIO
 
 import fitz                         # PyMuPDF — PDF to image
 from PIL import Image, ImageEnhance
-import google.generativeai as genai
+import requests
 
 from ..config import settings
 
@@ -144,17 +144,18 @@ Return ONLY the JSON. Nothing before {, nothing after }."""
 # Models to try in order (first with available free-tier quota wins)
 _GEMINI_MODELS = [
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-2.0-flash-001",
-    "gemini-2.0-flash-lite-001",
+    # "gemini-2.0-flash",
+    # "gemini-2.0-flash-lite",
+    # "gemini-2.0-flash-001",
+    # "gemini-2.0-flash-lite-001",
 ]
 
 
 def _call_gemini(image_bytes: bytes, mime_type: str) -> tuple:
     """
-    Send image to Gemini Vision and return (raw_text, model_used).
+    Send image to Gemini Vision via REST API and return (raw_text, model_used).
     Tries models in order, skipping any that hit quota/404 errors.
+    Uses direct REST API: https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent
     """
     if not settings.GEMINI_API_KEY:
         raise ValueError(
@@ -163,32 +164,76 @@ def _call_gemini(image_bytes: bytes, mime_type: str) -> tuple:
             "then add to backend/.env: GEMINI_API_KEY=your_key_here"
         )
 
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-
-    # Pass PIL Image directly — most reliable method across all SDK versions
-    pil_image = Image.open(BytesIO(image_bytes))
+    # Convert image bytes to base64
+    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
 
     last_error = None
     for model_name in _GEMINI_MODELS:
         try:
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                generation_config=genai.GenerationConfig(
-                    temperature=0.1,
-                    max_output_tokens=8192,
-                )
+            # Construct REST API URL
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+
+            # Prepare request payload
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": EXTRACTION_PROMPT},
+                            {
+                                "inline_data": {
+                                    "mime_type": mime_type,
+                                    "data": image_base64
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0.1,
+                    "maxOutputTokens": 8192
+                }
+            }
+
+            # Make REST API call
+            response = requests.post(
+                url,
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": settings.GEMINI_API_KEY
+                },
+                timeout=30
             )
-            response = model.generate_content([EXTRACTION_PROMPT, pil_image])
-            logger.info(f"Gemini extraction succeeded with model: {model_name}")
-            return response.text.strip(), model_name
+
+            # Handle response
+            if response.status_code == 200:
+                result = response.json()
+                text = result["candidates"][0]["content"]["parts"][0]["text"]
+                logger.info(f"Gemini extraction succeeded with model: {model_name}")
+                return text.strip(), model_name
+            else:
+                # Parse error
+                err_json = response.json() if response.text else {}
+                err_msg = err_json.get("error", {}).get("message", response.text)
+
+                # Skip quota-exhausted or model-not-found errors and try next model
+                if response.status_code in (429, 404) or "quota" in err_msg.lower():
+                    logger.warning(f"Model {model_name} unavailable ({response.status_code}: {err_msg[:80]}), trying next...")
+                    last_error = f"{response.status_code}: {err_msg}"
+                    continue
+                # Any other error (auth, network) — raise immediately
+                raise ValueError(f"Gemini API error ({response.status_code}): {err_msg}")
+
+        except requests.exceptions.RequestException as e:
+            # Network error
+            raise ValueError(f"Network error calling Gemini API: {e}")
         except Exception as e:
+            # Unexpected error
             err_str = str(e)
-            # Skip quota-exhausted or model-not-found errors and try next model
             if "429" in err_str or "404" in err_str or "quota" in err_str.lower():
-                logger.warning(f"Model {model_name} unavailable ({err_str[:80]}), trying next...")
+                logger.warning(f"Model {model_name} error ({err_str[:80]}), trying next...")
                 last_error = e
                 continue
-            # Any other error (auth, network) — raise immediately
             raise
 
     raise ValueError(

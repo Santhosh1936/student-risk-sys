@@ -22,3 +22,5 @@ app.include_router(teacher.router)
 @app.get("/")
 def root():
     return {"message": "SARS API running", "docs": "/docs"}
+
+

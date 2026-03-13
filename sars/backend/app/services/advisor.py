@@ -17,7 +17,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-import google.generativeai as genai
+import requests
 
 from ..config import settings
 from ..models.models import (
@@ -300,24 +300,61 @@ def _call_gemini(
     user_message: str
 ) -> str:
     """
-    Call Gemini 2.5 Flash with system prompt + conversation history.
+    Call Gemini 2.5 Flash via REST API with system prompt + conversation history.
     history: list of {role, parts} — previous messages in this thread.
     Returns AI response text.
+    Uses direct REST API: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
     """
-    genai.configure(api_key=settings.GEMINI_API_KEY)
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
-    model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
-        system_instruction=system_prompt,
-        generation_config=genai.GenerationConfig(
-            temperature=0.7,
-            max_output_tokens=2048,
-        )
+    # Convert history to Gemini API format and add current user message
+    contents = []
+
+    # Add history messages
+    for msg in history:
+        contents.append({
+            "role": msg["role"],
+            "parts": msg["parts"]
+        })
+
+    # Add current user message
+    contents.append({
+        "role": "user",
+        "parts": [{"text": user_message}]
+    })
+
+    # Prepare request payload
+    payload = {
+        "contents": contents,
+        "systemInstruction": {
+            "parts": [{"text": system_prompt}]
+        },
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 2048
+        }
+    }
+
+    # Make REST API call
+    response = requests.post(
+        url,
+        json=payload,
+        headers={
+            "Content-Type": "application/json",
+            "x-goog-api-key": settings.GEMINI_API_KEY
+        },
+        timeout=30
     )
 
-    chat = model.start_chat(history=history)
-    response = chat.send_message(user_message)
-    return response.text.strip()
+    if response.status_code == 200:
+        result = response.json()
+        text = result["candidates"][0]["content"]["parts"][0]["text"]
+        return text.strip()
+    else:
+        # Parse error
+        err_json = response.json() if response.text else {}
+        err_msg = err_json.get("error", {}).get("message", response.text)
+        raise ValueError(f"Gemini API error ({response.status_code}): {err_msg}")
 
 
 # ══════════════════════════════════════════════════════════════════════
