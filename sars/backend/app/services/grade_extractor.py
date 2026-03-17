@@ -1,7 +1,7 @@
 """
 grade_extractor.py — Google Gemini Vision Extraction
 =====================================================
-Uses Google Gemini 2.0 Flash (free tier) to extract SNIST JNTUH
+Uses Google Gemini 2.5 Flash (free tier) to extract SNIST JNTUH
 grade sheet data from uploaded PDF or image files.
 
 Free tier: 15 requests/min, 1500 requests/day
@@ -78,7 +78,7 @@ def _prepare_image(file_path: str) -> tuple:
 # EXTRACTION PROMPT
 # ══════════════════════════════════════════════════════
 
-EXTRACTION_PROMPT = """You are reading a JNTUH autonomous institution grade 
+EXTRACTION_PROMPT = """You are reading a JNTUH autonomous institution grade
 sheet from SNIST (Sreenidhi Institute of Science and Technology), Hyderabad.
 
 Extract ALL information from this grade sheet image.

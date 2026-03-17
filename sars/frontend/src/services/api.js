@@ -23,12 +23,12 @@ api.interceptors.request.use((config) => {
 
 // ── Response interceptor: handle expired tokens globally ───────────────────
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  response => response,
+  error => {
     if (error.response?.status === 401) {
-      // Token expired or invalid — clear session and redirect to login
-      sessionStorage.clear();
-      window.location.href = "/login";
+      sessionStorage.removeItem('sars_token');
+      localStorage.removeItem('sars_token');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -43,10 +43,8 @@ export const authAPI = {
 
 // ── Student endpoints ───────────────────────────────────────────────────────
 export const studentAPI = {
-  getProfile:      ()         => api.get("/student/profile"),
-  getSemesters:    ()         => api.get("/student/semesters"),
-  uploadMarksheet: (formData) => api.post("/student/upload-marksheet", formData, { timeout: 120000 }),
-  debugExtract:    (formData) => api.post("/student/debug-extract",    formData, { timeout: 120000 }),
+  getProfile:   () => api.get("/student/profile"),
+  getSemesters: () => api.get("/student/semesters"),
 };
 
 // ── Teacher endpoints (populated further in Goal 5) ────────────────────────

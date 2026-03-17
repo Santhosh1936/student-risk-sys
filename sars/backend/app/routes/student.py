@@ -1,20 +1,53 @@
 ﻿import os
 import uuid
+from collections import defaultdict
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel
 from typing import Optional, List
 from ..database import get_db
 from ..services.dependencies import require_student
-from ..models.models import User, Student, SemesterRecord, SubjectGrade
+from ..models.models import User, Student, SemesterRecord, SubjectGrade, AttendanceRecord
 from ..services.grade_extractor import extract_from_file, get_gemini_status
-from ..services.risk_engine import compute_risk_score, get_student_risk
+from ..services.risk_engine import compute_risk_score, get_student_risk, compute_cgpa
 from ..services.advisor import send_message as advisor_send, get_chat_history as advisor_history, mark_data_updated
 
 import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/student", tags=["Student"])
+
+# ── Student dependency helper ─────────────────────────────────────────────────
+
+def get_student_or_404(
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+) -> Student:
+    s = db.query(Student).filter(
+        Student.user_id == current_user.id
+    ).first()
+    if not s:
+        raise HTTPException(404, "Student profile not found.")
+    return s
+
+# Per-student chat rate limit
+_chat_attempts: dict = defaultdict(list)
+_CHAT_MAX = 10
+_CHAT_WINDOW = 60
+
+def _check_chat_rate(student_id: int):
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=_CHAT_WINDOW)
+    _chat_attempts[student_id] = [
+        t for t in _chat_attempts[student_id] if t > cutoff
+    ]
+    if len(_chat_attempts[student_id]) >= _CHAT_MAX:
+        raise HTTPException(
+            429,
+            "Chat rate limit reached. Please wait a minute before sending more messages.",
+        )
+    _chat_attempts[student_id].append(now)
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "uploads")
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png"}
@@ -67,10 +100,23 @@ class ConfirmUploadRequest(BaseModel):
     subjects: List[SubjectInput]
 
 
+class AttendanceSubjectInput(BaseModel):
+    subject_name: str
+    classes_attended: int
+    total_classes: int
+
+
+class SubmitAttendanceRequest(BaseModel):
+    semester_no: int
+    subjects: List[AttendanceSubjectInput]
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.get("/extraction-status")
-def extraction_status():
+def extraction_status(
+    current_user: User = Depends(require_student)
+):
     """Returns Gemini API configuration status."""
     return get_gemini_status()
 
@@ -84,15 +130,10 @@ def get_student_profile(
 
     # Recompute CGPA from semester records if profile value is stale or missing
     if s:
-        records = db.query(SemesterRecord).filter(
-            SemesterRecord.student_id == s.id
-        ).all()
-        valid_gpas = [float(r.gpa) for r in records if r.gpa is not None]
-        if valid_gpas:
-            computed_cgpa = round(sum(valid_gpas) / len(valid_gpas), 2)
-            if s.cgpa != computed_cgpa:
-                s.cgpa = computed_cgpa
-                db.commit()
+        computed_cgpa = compute_cgpa(s.id, db)
+        if computed_cgpa is not None and s.cgpa != computed_cgpa:
+            s.cgpa = computed_cgpa
+            db.commit()
 
     return StudentProfileResponse(
         user_id=current_user.id,
@@ -147,7 +188,7 @@ async def extract_marksheet(
     }
 
 
-@router.post("/confirm-marksheet")
+@router.post("/confirm-marksheet", status_code=201)
 def confirm_marksheet(
     data: ConfirmUploadRequest,
     current_user: User = Depends(require_student),
@@ -188,6 +229,34 @@ def confirm_marksheet(
     db.add(record)
     db.flush()
 
+    # BL-08: Validate grade_letter before saving
+    VALID_GRADES = {
+        "O", "A+", "A", "B+", "B", "C", "D", "F",
+        "AB", "S*", "NS", "NS*", "P"
+    }
+    for s in data.subjects:
+        if s.grade_letter and \
+           s.grade_letter.upper() not in VALID_GRADES:
+            raise HTTPException(
+                422,
+                f"Invalid grade '{s.grade_letter}' for "
+                f"'{s.subject_name}'. Valid: "
+                f"{', '.join(sorted(VALID_GRADES))}"
+            )
+
+    # Validate grade_points and credits before saving
+    for subj in data.subjects:
+        if subj.grade_points is not None and not (0 <= subj.grade_points <= 10):
+            raise HTTPException(
+                400,
+                f"Invalid grade_points {subj.grade_points} for '{subj.subject_name}'. Must be 0-10."
+            )
+        if subj.credits is not None and not (0 <= subj.credits <= 6):
+            raise HTTPException(
+                400,
+                f"Invalid credits {subj.credits} for '{subj.subject_name}'. Must be 0-6."
+            )
+
     # Save SubjectGrades
     for subj in data.subjects:
         db.add(SubjectGrade(
@@ -201,12 +270,16 @@ def confirm_marksheet(
         ))
 
     # Update student profile
-    if data.cgpa is not None:
-        student.cgpa = data.cgpa
     if data.branch and not student.branch:
         student.branch = data.branch
     if data.semester_no >= (student.current_semester or 1):
         student.current_semester = data.semester_no
+
+    # Recalculate CGPA using correct JNTUH credits-weighted formula.
+    # compute_cgpa sees the new SemesterRecord because of the db.flush() above.
+    correct_cgpa = compute_cgpa(student.id, db)
+    if correct_cgpa is not None:
+        student.cgpa = correct_cgpa
 
     db.commit()
 
@@ -241,14 +314,17 @@ def get_student_semesters(
     if not student:
         return []
 
-    records = db.query(SemesterRecord)\
-        .filter(SemesterRecord.student_id == student.id)\
-        .order_by(SemesterRecord.semester_no).all()
+    records = (
+        db.query(SemesterRecord)
+        .options(joinedload(SemesterRecord.subjects))
+        .filter(SemesterRecord.student_id == student.id)
+        .order_by(SemesterRecord.semester_no)
+        .all()
+    )
 
     result = []
     for r in records:
-        subjects = db.query(SubjectGrade)\
-            .filter(SubjectGrade.semester_record_id == r.id).all()
+        subjects = r.subjects
         result.append({
             "semester_no": r.semester_no,
             "semester_record_id": r.id,
@@ -346,7 +422,171 @@ def delete_semester(
     ).delete()
     db.delete(record)
     db.commit()
+
+    # Recompute CGPA after semester deletion
+    correct_cgpa = compute_cgpa(student.id, db)
+    if correct_cgpa is not None:
+        student.cgpa = correct_cgpa
+    else:
+        student.cgpa = None
+    db.commit()
+
+    # Recompute risk score with updated data
+    try:
+        compute_risk_score(student.id, db)
+    except Exception as e:
+        logger.warning(f"Risk recompute after delete failed: {e}")
+
+    # Update current_semester to reflect remaining records
+    remaining = (
+        db.query(SemesterRecord)
+        .filter(SemesterRecord.student_id == student.id)
+        .order_by(SemesterRecord.semester_no.desc())
+        .first()
+    )
+    student.current_semester = (remaining.semester_no + 1) if remaining else 1
+    db.commit()
+
     return {"message": f"Semester {semester_no} deleted."}
+
+
+@router.post("/attendance", status_code=201)
+def submit_attendance(
+    data: SubmitAttendanceRequest,
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+):
+    """
+    Submit attendance for one semester (replaces existing records for that semester).
+    Calculates percentage per subject automatically.
+    Triggers risk score recomputation after save.
+    """
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student:
+        raise HTTPException(404, "Student profile not found.")
+
+    if not data.subjects:
+        raise HTTPException(400, "At least one subject is required.")
+
+    for subj in data.subjects:
+        if subj.total_classes <= 0:
+            raise HTTPException(
+                400,
+                f"total_classes must be > 0 for subject '{subj.subject_name}'."
+            )
+        if subj.classes_attended < 0:
+            raise HTTPException(
+                400,
+                f"classes_attended cannot be negative for subject '{subj.subject_name}'."
+            )
+        if subj.classes_attended > subj.total_classes:
+            raise HTTPException(
+                400,
+                f"classes_attended cannot exceed total_classes for '{subj.subject_name}'."
+            )
+
+    # Delete existing attendance records for this semester
+    db.query(AttendanceRecord).filter(
+        AttendanceRecord.student_id == student.id,
+        AttendanceRecord.semester_no == data.semester_no
+    ).delete()
+
+    # Insert new records
+    for subj in data.subjects:
+        pct = round(subj.classes_attended / subj.total_classes * 100.0, 2)
+        db.add(AttendanceRecord(
+            student_id=student.id,
+            semester_no=data.semester_no,
+            subject_name=subj.subject_name.strip(),
+            classes_attended=subj.classes_attended,
+            total_classes=subj.total_classes,
+            percentage=pct,
+        ))
+
+    db.commit()
+
+    # Recompute risk score with updated attendance
+    try:
+        compute_risk_score(student.id, db)
+    except Exception as e:
+        logger.warning(f"Risk recompute after attendance update failed: {e}")
+
+    return {
+        "message": f"Attendance for semester {data.semester_no} saved.",
+        "semester_no": data.semester_no,
+        "subjects_saved": len(data.subjects),
+    }
+
+
+@router.get("/attendance")
+def get_attendance(
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+):
+    """
+    Return all attendance records for the logged-in student, grouped by semester.
+    """
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student:
+        return []
+
+    records = (
+        db.query(AttendanceRecord)
+        .filter(AttendanceRecord.student_id == student.id)
+        .order_by(AttendanceRecord.semester_no, AttendanceRecord.subject_name)
+        .all()
+    )
+
+    # Group by semester
+    grouped: dict = {}
+    for rec in records:
+        sem = rec.semester_no
+        if sem not in grouped:
+            grouped[sem] = []
+        grouped[sem].append({
+            "subject_name": rec.subject_name,
+            "classes_attended": rec.classes_attended,
+            "total_classes": rec.total_classes,
+            "percentage": rec.percentage,
+        })
+
+    return [
+        {"semester_no": sem, "subjects": subjs}
+        for sem, subjs in sorted(grouped.items())
+    ]
+
+
+@router.delete("/attendance/{semester_no}")
+def delete_attendance(
+    semester_no: int,
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete all attendance records for a given semester.
+    Triggers risk score recomputation (attendance will revert to default penalty).
+    """
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student:
+        raise HTTPException(404, "Student not found.")
+
+    deleted = db.query(AttendanceRecord).filter(
+        AttendanceRecord.student_id == student.id,
+        AttendanceRecord.semester_no == semester_no
+    ).delete()
+
+    if deleted == 0:
+        raise HTTPException(404, f"No attendance records found for semester {semester_no}.")
+
+    db.commit()
+
+    # Recompute risk score with attendance removed
+    try:
+        compute_risk_score(student.id, db)
+    except Exception as e:
+        logger.warning(f"Risk recompute after attendance delete failed: {e}")
+
+    return {"message": f"Attendance for semester {semester_no} deleted."}
 
 
 @router.post("/advisor/chat")
@@ -366,6 +606,8 @@ def advisor_chat(
     ).first()
     if not student:
         raise HTTPException(404, "Student profile not found.")
+
+    _check_chat_rate(student.id)
 
     if not request.message or not request.message.strip():
         raise HTTPException(400, "Message cannot be empty.")
@@ -402,3 +644,32 @@ def advisor_get_history(
 
     history = advisor_history(student.id, db)
     return {"messages": history, "count": len(history)}
+
+
+# ── BA-07: Update student profile ────────────────────────────────────────────
+
+class UpdateProfileRequest(BaseModel):
+    full_name: Optional[str] = None
+    roll_number: Optional[str] = None
+    branch: Optional[str] = None
+
+
+@router.patch("/profile")
+def update_profile(
+    request: UpdateProfileRequest,
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+):
+    student = db.query(Student).filter(
+        Student.user_id == current_user.id
+    ).first()
+    if not student:
+        raise HTTPException(404, "Profile not found.")
+    if request.full_name is not None:
+        current_user.full_name = request.full_name.strip()
+    if request.roll_number is not None:
+        current_user.roll_number = request.roll_number.strip()
+    if request.branch is not None:
+        student.branch = request.branch.strip()
+    db.commit()
+    return {"message": "Profile updated successfully."}

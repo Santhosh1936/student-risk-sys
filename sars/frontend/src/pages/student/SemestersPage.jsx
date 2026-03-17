@@ -1,18 +1,38 @@
 // frontend/src/pages/student/SemestersPage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import api from '../../services/api';
 
 export default function SemestersPage() {
   const [semesters, setSemesters] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [expanded, setExpanded]   = useState(null);
+  const [error, setError]         = useState('');
+  const [deleting, setDeleting]   = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setError('');
     api.get('/student/semesters')
       .then((r) => setSemesters(r.data))
-      .catch(console.error)
+      .catch(() => setError('Could not load academic records. Please refresh.'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async (semNo) => {
+    setDeleting(semNo);
+    setConfirmDelete(null);
+    try {
+      await api.delete(`/student/semesters/${semNo}`);
+      load();
+    } catch (e) {
+      setError(e.response?.data?.detail || `Failed to delete Semester ${semNo}.`);
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const gradeColor = (g) => ({
     'O':  '#16a34a', 'A+': '#22c55e', 'A':  '#3b82f6',
@@ -24,6 +44,20 @@ export default function SemestersPage() {
   if (loading) {
     return <p style={{ color: '#64748b', padding: 32 }}>Loading academic records…</p>;
   }
+
+  if (error) return (
+    <div style={{
+      background: 'rgba(248,113,113,0.08)', border: '1px solid #f87171',
+      borderRadius: 10, padding: '14px 18px', color: '#f87171', fontSize: 13,
+    }}>
+      {error}
+      <button onClick={load} style={{
+        marginLeft: 12, background: 'none', border: '1px solid #f87171',
+        color: '#f87171', borderRadius: 6, padding: '3px 10px',
+        fontSize: 12, cursor: 'pointer',
+      }}>Retry</button>
+    </div>
+  );
 
   if (semesters.length === 0) {
     return (
@@ -48,6 +82,17 @@ export default function SemestersPage() {
           {semesters.length} semester{semesters.length !== 1 ? 's' : ''} uploaded
         </p>
       </div>
+
+      {/* Error banner (non-blocking, e.g. delete failure) */}
+      {error && (
+        <div style={{
+          background: 'rgba(248,113,113,0.08)', border: '1px solid #f87171',
+          borderRadius: 8, padding: '10px 14px', color: '#f87171',
+          fontSize: 13, marginBottom: 16,
+        }}>
+          {error}
+        </div>
+      )}
 
       {/* SGPA tile bar */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
@@ -80,34 +125,69 @@ export default function SemestersPage() {
         >
           {/* Header row */}
           <div
-            onClick={() =>
-              setExpanded(expanded === sem.semester_no ? null : sem.semester_no)
-            }
             style={{
               padding: '16px 20px', cursor: 'pointer',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               background: expanded === sem.semester_no ? '#0f172a' : 'transparent',
             }}
           >
-            <div>
-              <span style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9' }}>
-                Semester {sem.semester_no}
-              </span>
-              <span style={{ fontSize: 13, color: '#475569', marginLeft: 12 }}>
-                {sem.subjects?.length || 0} subjects
-                {sem.credits_earned != null && ` · ${sem.credits_earned} credits`}
-              </span>
+            <div
+              onClick={() => setExpanded(expanded === sem.semester_no ? null : sem.semester_no)}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}
+            >
+              <div>
+                <span style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9' }}>
+                  Semester {sem.semester_no}
+                </span>
+                <span style={{ fontSize: 13, color: '#475569', marginLeft: 12 }}>
+                  {sem.subjects?.length || 0} subjects
+                  {sem.credits_earned != null && ` · ${sem.credits_earned} credits`}
+                </span>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               {sem.gpa != null && (
-                <div style={{ textAlign: 'right' }}>
+                <div
+                  onClick={() => setExpanded(expanded === sem.semester_no ? null : sem.semester_no)}
+                  style={{ textAlign: 'right' }}
+                >
                   <div style={{ fontSize: 22, fontWeight: 800, color: '#38bdf8' }}>
                     {sem.gpa}
                   </div>
                   <div style={{ fontSize: 11, color: '#475569' }}>SGPA</div>
                 </div>
               )}
-              <span style={{ fontSize: 16, color: '#475569' }}>
+              {confirmDelete === sem.semester_no ? (
+                <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                  <span style={{ fontSize:12, color:'#f87171' }}>Delete?</span>
+                  <button
+                    onClick={() => handleDelete(sem.semester_no)}
+                    disabled={deleting === sem.semester_no}
+                    style={{ padding:'3px 10px', background:'#ef4444', color:'#fff',
+                             border:'none', borderRadius:5, fontSize:11, cursor:'pointer' }}>
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(null)}
+                    style={{ padding:'3px 10px', background:'#334155', color:'#94a3b8',
+                             border:'none', borderRadius:5, fontSize:11, cursor:'pointer' }}>
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(sem.semester_no)}
+                  style={{ background:'transparent', border:'1px solid #f87171',
+                           color:'#f87171', borderRadius:6, padding:'4px 12px',
+                           fontSize:12, cursor:'pointer' }}>
+                  🗑 Delete
+                </button>
+              )}
+              <span
+                onClick={() => setExpanded(expanded === sem.semester_no ? null : sem.semester_no)}
+                style={{ fontSize: 16, color: '#475569' }}
+              >
                 {expanded === sem.semester_no ? '▲' : '▼'}
               </span>
             </div>
@@ -138,7 +218,7 @@ export default function SemestersPage() {
                 <tbody>
                   {sem.subjects.map((s, i) => (
                     <tr
-                      key={i}
+                      key={s.subject_code || `${s.subject_name}-${i}`}
                       style={{ borderBottom: '1px solid #1e293b' }}
                     >
                       <td style={{

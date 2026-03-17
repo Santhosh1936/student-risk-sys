@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 const LEVEL_CFG = {
@@ -12,12 +13,15 @@ const LEVEL_CFG = {
 export default function RiskMonitorPage() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState('');
   const [filter, setFilter]     = useState('ALL');
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/teacher/risk-overview')
       .then(r => setStudents(r.data))
-      .catch(console.error)
+      .catch(() => setError('Could not load risk data. Please try again.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -33,18 +37,49 @@ export default function RiskMonitorPage() {
     return acc;
   }, {});
 
+  const downloadCSV = () => {
+    const headers = ['Name','Roll No','Branch','Semester','CGPA','SARS Score','Risk Level','Advisory'];
+    const rows = students.map(s => [
+      s.full_name || '',
+      s.roll_number || '',
+      s.branch || '',
+      s.current_semester || '',
+      s.cgpa?.toFixed(2) || '',
+      s.sars_score?.toFixed(1) || '',
+      s.risk_level || '',
+      (s.advisory_text || '').replace(/,/g, ';'),
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sars_risk_report_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) return (
-    <p style={{ color: '#666', padding: 40 }}>
+    <p style={{ color: '#64748b', padding: 40 }}>
       Loading risk data...
     </p>
   );
 
+  if (error) return (
+    <div style={{
+      background: 'rgba(248,113,113,0.08)', border: '1px solid #f87171',
+      borderRadius: 10, padding: '14px 18px', color: '#f87171', fontSize: 13,
+    }}>
+      {error}
+    </div>
+  );
+
   return (
     <div>
-      <h2 style={{ color: '#1e3a5f', marginBottom: 4 }}>
+      <h2 style={{ color: '#f1f5f9', marginBottom: 4 }}>
         Risk Monitor
       </h2>
-      <p style={{ color: '#666', fontSize: 14, marginBottom: 24 }}>
+      <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 24 }}>
         All students ranked by SARS risk score (highest risk first)
       </p>
 
@@ -66,44 +101,50 @@ export default function RiskMonitorPage() {
                             color: cfg.color }}>
                 {counts[l]}
               </div>
-              <div style={{ fontSize: 11, color: '#666' }}>{l}</div>
+              <div style={{ fontSize: 11, color: '#94a3b8' }}>{l}</div>
             </div>
           );
         })}
-        <div style={{ background: '#f0f4f8', borderRadius: 10,
+        <div style={{ background: '#334155', borderRadius: 10,
                       padding: '12px 20px', textAlign: 'center',
                       minWidth: 100 }}>
           <div style={{ fontSize: 22 }}>👥</div>
           <div style={{ fontSize: 22, fontWeight: 800,
-                        color: '#1e3a5f' }}>
+                        color: '#f1f5f9' }}>
             {students.length}
           </div>
-          <div style={{ fontSize: 11, color: '#666' }}>TOTAL</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>TOTAL</div>
         </div>
       </div>
 
       {/* -- Filter bar ------------------------------------------------------ */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center', flexWrap:'wrap' }}>
         {levels.map(l => (
           <button key={l} onClick={() => setFilter(l)}
             style={{ padding: '6px 14px', borderRadius: 6, border: 'none',
-                     background: filter === l ? '#1e3a5f' : '#f0f4f8',
-                     color: filter === l ? '#fff' : '#555',
+                     background: filter === l ? '#1e3a5f' : '#334155',
+                     color: filter === l ? '#fff' : '#94a3b8',
                      fontWeight: filter === l ? 700 : 400,
                      cursor: 'pointer', fontSize: 13 }}>
             {l}
           </button>
         ))}
+        <button onClick={downloadCSV}
+          style={{ padding:'6px 14px', borderRadius:6, border:'1px solid #334155',
+                   background:'#1e293b', color:'#94a3b8', fontSize:13, cursor:'pointer',
+                   marginLeft:'auto' }}>
+          ⬇ Export CSV
+        </button>
       </div>
 
       {/* -- Student table --------------------------------------------------- */}
       {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>
+        <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
           No students in {filter} category.
         </div>
       ) : (
-        <div style={{ background: '#fff', borderRadius: 12,
-                      border: '1px solid #e0e8f0', overflow: 'hidden' }}>
+        <div style={{ background: '#0f172a', borderRadius: 12,
+                      border: '1px solid #334155', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#1e3a5f', color: '#fff' }}>
@@ -120,27 +161,35 @@ export default function RiskMonitorPage() {
             <tbody>
               {filtered.map((s, i) => {
                 const cfg = LEVEL_CFG[s.risk_level] || LEVEL_CFG.UNKNOWN;
+                const isHovered = hoveredRow === i;
                 return (
                   <tr key={s.student_id}
-                    style={{ background: i % 2 === 0 ? '#f8fafd' : '#fff',
-                             borderBottom: '1px solid #eef2f7' }}>
+                    onClick={() => navigate(`/teacher/students/${s.student_id}`)}
+                    onMouseEnter={() => setHoveredRow(i)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    style={{
+                      background: isHovered ? '#334155' : (i % 2 === 0 ? '#1e293b' : '#0f172a'),
+                      borderBottom: '1px solid #1e293b',
+                      cursor: 'pointer',
+                    }}>
                     <td style={{ padding: '12px 14px', fontWeight: 600,
-                                 fontSize: 13 }}>
+                                 fontSize: 13, color: '#f1f5f9' }}>
                       {s.full_name}
                     </td>
                     <td style={{ padding: '12px 14px', fontSize: 12,
-                                 color: '#666' }}>
+                                 color: '#94a3b8' }}>
                       {s.roll_number || '—'}
                     </td>
-                    <td style={{ padding: '12px 14px', fontSize: 12 }}>
+                    <td style={{ padding: '12px 14px', fontSize: 12,
+                                 color: '#f1f5f9' }}>
                       {s.branch || '—'}
                     </td>
                     <td style={{ padding: '12px 14px', fontSize: 13,
-                                 textAlign: 'center' }}>
+                                 textAlign: 'center', color: '#f1f5f9' }}>
                       {s.current_semester}
                     </td>
                     <td style={{ padding: '12px 14px', fontWeight: 700,
-                                 color: '#1e3a5f', fontSize: 14 }}>
+                                 color: '#f1f5f9', fontSize: 14 }}>
                       {s.cgpa?.toFixed(2) ?? '—'}
                     </td>
                     <td style={{ padding: '12px 14px', fontWeight: 800,
@@ -160,10 +209,10 @@ export default function RiskMonitorPage() {
                       </span>
                     </td>
                     <td style={{ padding: '12px 14px', fontSize: 12,
-                                 color: '#555', maxWidth: 220 }}>
-                      {s.advisory_text
+                                 color: '#94a3b8', maxWidth: 220 }}>
+                      {s.advisory_text?.length > 80
                         ? s.advisory_text.substring(0, 80) + '...'
-                        : '—'}
+                        : (s.advisory_text || '—')}
                     </td>
                   </tr>
                 );

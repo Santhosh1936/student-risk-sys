@@ -52,7 +52,9 @@ export default function UploadMarksPage() {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000
       });
-      setData(JSON.parse(JSON.stringify(res.data.extracted)));
+      const extracted = JSON.parse(JSON.stringify(res.data.extracted));
+      if (res.data.warning) extracted._warning = res.data.warning;
+      setData(extracted);
       setPhase('review');
     } catch (e) {
       setError(e.response?.data?.detail || 'Extraction failed. Check your API key and try again.');
@@ -131,62 +133,39 @@ export default function UploadMarksPage() {
   };
 
   const inp = {
-    padding: '7px 10px', border: '1px solid #d0dce8', borderRadius: 6,
-    fontSize: 13, width: '100%', boxSizing: 'border-box', color: '#1e293b'
+    padding: '7px 10px', border: '1px solid #1e293b', borderRadius: 6,
+    fontSize: 13, width: '100%', boxSizing: 'border-box',
+    color: '#f1f5f9', background: '#0a0f1e',
   };
-  const labelStyle = { fontSize: 12, color: '#666', display: 'block', marginBottom: 4 };
-  const card = { background: '#fff', borderRadius: 12, border: '1px solid #e0e8f0', padding: 24, marginBottom: 20 };
+  const labelStyle = { fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4, fontWeight: 600 };
+  const card = { background: '#111827', borderRadius: 12, border: '1px solid #1e293b', padding: 24, marginBottom: 20 };
 
   // PHASE 1 — Upload
   if (phase === 'upload') return (
     <div style={{ maxWidth: 680 }}>
-      <h2 style={{ color: '#1e3a5f', marginBottom: 4 }}>Upload Marksheet</h2>
-      <p style={{ color: '#666', fontSize: 14, marginBottom: 24 }}>
+      <h2 style={{ color: '#f1f5f9', marginBottom: 4 }}>Upload Marksheet</h2>
+      <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 24 }}>
         Upload your JNTUH grade sheet photo or PDF. Gemini AI will extract all
         grades automatically. You can review and edit before saving.
       </p>
 
       {extractionStatus && (
-        <div style={{
-          background: extractionStatus.api_key_configured
-            ? '#f0fff4' : '#fff8e0',
-          border: `1px solid ${extractionStatus.api_key_configured
-            ? '#9ae6b4' : '#f6e05e'}`,
-          borderRadius: 8, padding: '12px 16px',
-          marginBottom: 20, fontSize: 13
-        }}>
-          <div style={{ display:'flex', alignItems:'center', gap: 12 }}>
-            <span style={{ fontSize: 20 }}>
-              {extractionStatus.api_key_configured ? '🟢' : '🟡'}
-            </span>
-            <div>
-              <strong>
-                {extractionStatus.api_key_configured
-                  ? `${extractionStatus.engine} — Ready`
-                  : 'Gemini API Key Not Configured'}
-              </strong>
-              <div style={{ color:'#555', marginTop: 3 }}>
-                {extractionStatus.recommendation}
-              </div>
-              <div style={{ color:'#888', fontSize: 12, marginTop: 3 }}>
-                Free tier: {extractionStatus.free_tier}
-              </div>
-            </div>
-          </div>
+        <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+          {extractionStatus.api_key_configured ? 'AI extraction ready' : 'API key not configured'}
         </div>
       )}
 
       <div
-        style={{ border: '2px dashed #b0c8e0', borderRadius: 12, padding: 40,
-                 textAlign: 'center', background: '#f8fafd',
+        style={{ border: '2px dashed #334155', borderRadius: 12, padding: 40,
+                 textAlign: 'center', background: '#1e293b',
                  cursor: 'pointer', marginBottom: 16 }}
         onClick={() => fileRef.current?.click()}
       >
         <div style={{ fontSize: 52, marginBottom: 12 }}>{file ? '📄' : '📂'}</div>
-        <div style={{ fontWeight: 600, color: '#1e3a5f', fontSize: 15, marginBottom: 6 }}>
+        <div style={{ fontWeight: 600, color: '#f1f5f9', fontSize: 15, marginBottom: 6 }}>
           {file ? file.name : 'Click to select grade sheet'}
         </div>
-        <div style={{ fontSize: 13, color: '#888' }}>JPG · PNG · PDF — Max 10MB</div>
+        <div style={{ fontSize: 13, color: '#94a3b8' }}>JPG · PNG · PDF — Max 10MB</div>
         <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf"
                onChange={handleFileChange} style={{ display: 'none' }} />
       </div>
@@ -217,12 +196,63 @@ export default function UploadMarksPage() {
       )}
 
       {extracting && (
-        <p style={{ textAlign:'center', color:'#666',
+        <p style={{ textAlign:'center', color:'#94a3b8',
                     fontSize:13, marginTop:12 }}>
           ✨ Gemini is reading your grade sheet...
           This takes 5–10 seconds.
         </p>
       )}
+    </div>
+  );
+
+  // PHASE 2 — Extraction failed (no subjects returned)
+  if (phase === 'review' && data && (!data.subjects || data.subjects.length === 0)) return (
+    <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center', padding: 40 }}>
+      <div style={{
+        background: '#1e293b',
+        border: '1px solid #ef4444',
+        borderRadius: 12, padding: 32,
+      }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
+        <h3 style={{ color: '#f1f5f9', margin: '0 0 12px', fontSize: 18 }}>
+          Extraction Failed
+        </h3>
+        <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7, marginBottom: 24 }}>
+          Could not extract grade data from this file.
+          Please make sure you are uploading a clear photo or scan of your JNTUH SNIST grade sheet.
+        </p>
+        <div style={{
+          background: '#0f172a', border: '1px solid #334155',
+          borderRadius: 8, padding: '14px 16px',
+          marginBottom: 24, textAlign: 'left',
+          fontSize: 13, color: '#94a3b8', lineHeight: 1.8,
+        }}>
+          <div style={{ color: '#f1f5f9', fontWeight: 600, marginBottom: 8 }}>
+            Tips for better extraction:
+          </div>
+          <div>📸 Use a well-lit, straight photo</div>
+          <div>🔍 Make sure all text is clearly visible</div>
+          <div>📄 PDF from university portal works best</div>
+          <div>↕️ Hold phone parallel to the document</div>
+          <div>🚫 Avoid shadows and glare</div>
+        </div>
+        <button
+          onClick={() => {
+            setPhase('upload');
+            setData(null);
+            setFile(null);
+            setPreview(null);
+            if (fileRef.current) fileRef.current.value = '';
+          }}
+          style={{
+            padding: '12px 28px', background: '#3b82f6',
+            color: '#fff', border: 'none', borderRadius: 8,
+            fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          ← Try Again with Different File
+        </button>
+      </div>
     </div>
   );
 
@@ -232,13 +262,13 @@ export default function UploadMarksPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between',
                     alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h2 style={{ color: '#1e3a5f', margin: 0 }}>Review Extracted Data</h2>
-          <p style={{ color: '#666', fontSize: 13, margin: '4px 0 0' }}>
+          <h2 style={{ color: '#f1f5f9', margin: 0 }}>Review Extracted Data</h2>
+          <p style={{ color: '#64748b', fontSize: 13, margin: '4px 0 0' }}>
             Check all fields. Edit anything that looks wrong before saving.
           </p>
         </div>
         <button onClick={resetAll} style={{ padding: '8px 16px', background: 'none',
-          border: '1px solid #ccc', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
+          border: '1px solid #1e293b', color: '#94a3b8', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
           ← Upload Different File
         </button>
       </div>
@@ -251,7 +281,7 @@ export default function UploadMarksPage() {
       )}
 
       <div style={card}>
-        <h3 style={{ color: '#1e3a5f', marginTop: 0, marginBottom: 16 }}>📋 Document Information</h3>
+        <h3 style={{ color: '#f1f5f9', marginTop: 0, marginBottom: 16 }}>📋 Document Information</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
           {[
             ['Hall Ticket No', 'hall_ticket_no'],
@@ -276,7 +306,7 @@ export default function UploadMarksPage() {
       </div>
 
       <div style={card}>
-        <h3 style={{ color: '#1e3a5f', marginTop: 0, marginBottom: 16 }}>📊 Performance Summary</h3>
+        <h3 style={{ color: '#f1f5f9', marginTop: 0, marginBottom: 16 }}>📊 Performance Summary</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
           {[
             ['Semester No', 'semester_no', 'number'],
@@ -296,13 +326,8 @@ export default function UploadMarksPage() {
       </div>
 
       <div style={card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between',
-                      alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ color: '#1e3a5f', margin: 0 }}>📚 Subjects ({data.subjects?.length || 0})</h3>
-          <button onClick={addSubject} style={{
-            padding: '6px 14px', background: '#1e6b3a', color: '#fff',
-            border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13
-          }}>+ Add Subject</button>
+        <div style={{ marginBottom: 16 }}>
+          <h3 style={{ color: '#f1f5f9', margin: 0 }}>📚 Subjects ({data.subjects?.length || 0})</h3>
         </div>
 
         <div style={{ overflowX: 'auto' }}>
@@ -317,9 +342,9 @@ export default function UploadMarksPage() {
             </thead>
             <tbody>
               {(data.subjects || []).map((s, i) => (
-                <tr key={i} style={{ background: i % 2 === 0 ? '#f8fafd' : '#fff',
-                                     borderBottom: '1px solid #eef2f7' }}>
-                  <td style={{ padding: '6px 8px', fontSize: 12, color: '#888' }}>{s.sno}</td>
+                <tr key={i} style={{ background: i % 2 === 0 ? '#0f172a' : '#111827',
+                                     borderBottom: '1px solid #1e293b' }}>
+                  <td style={{ padding: '6px 8px', fontSize: 12, color: '#475569' }}>{s.sno}</td>
                   <td style={{ padding: '6px 8px' }}>
                     <input style={{ ...inp, width: 80 }} value={s.subject_code}
                            onChange={e => updateSubject(i, 'subject_code', e.target.value)} />
@@ -337,7 +362,7 @@ export default function UploadMarksPage() {
                       {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                   </td>
-                  <td style={{ padding: '6px 8px', fontWeight: 700, color: '#1e3a5f', fontSize: 14 }}>
+                  <td style={{ padding: '6px 8px', fontWeight: 700, color: '#38bdf8', fontSize: 14 }}>
                     {s.grade_points}
                   </td>
                   <td style={{ padding: '6px 8px' }}>
@@ -370,14 +395,15 @@ export default function UploadMarksPage() {
           const mismatch = data.sgpa && Math.abs(parseFloat(calcGPA) - data.sgpa) > 0.05;
           return (
             <div style={{ marginTop: 16, padding: '12px 16px',
-                          background: '#e8f4fd', borderRadius: 8,
+                          background: 'rgba(56,189,248,0.08)', borderRadius: 8,
+                          border: '1px solid #1e293b',
                           display: 'flex', gap: 24, fontSize: 14, flexWrap: 'wrap' }}>
-              <span>📐 <strong>Calculated SGPA:</strong> {calcGPA}</span>
-              <span>📦 <strong>Total Credits:</strong> {totalCredits}</span>
-              <span style={{ color: mismatch ? '#e67e22' : '#27ae60' }}>
+              <span style={{ color: '#f1f5f9' }}>📐 <strong>Calculated SGPA:</strong> {calcGPA}</span>
+              <span style={{ color: '#f1f5f9' }}>📦 <strong>Total Credits:</strong> {totalCredits}</span>
+              <span style={{ color: mismatch ? '#fb923c' : '#34d399' }}>
                 {mismatch
-                  ? `⚠️ Extracted SGPA was ${data.sgpa} — verify`
-                  : `✅ Matches extracted SGPA (${data.sgpa})`}
+                  ? `⚠️ Extracted SGPA was ${data.sgpa != null ? data.sgpa : 'No GPA in file'} — verify`
+                  : `✅ Matches extracted SGPA (${data.sgpa != null ? data.sgpa : 'No GPA in file'})`}
               </span>
             </div>
           );
@@ -400,10 +426,10 @@ export default function UploadMarksPage() {
   if (phase === 'done') return (
     <div style={{ maxWidth: 600, textAlign: 'center', padding: 40 }}>
       <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
-      <h2 style={{ color: '#1e3a5f', marginBottom: 8 }}>
+      <h2 style={{ color: '#f1f5f9', marginBottom: 8 }}>
         Semester {savedResult?.semester_no} Saved!
       </h2>
-      <p style={{ color: '#666', fontSize: 15, marginBottom: 32 }}>
+      <p style={{ color: '#64748b', fontSize: 15, marginBottom: 32 }}>
         {savedResult?.subjects_saved} subjects saved to your academic record.
       </p>
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>

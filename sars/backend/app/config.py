@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     DATABASE_URL: str = _DEFAULT_DB_URL
     GEMINI_API_KEY: str = ""
+    TEACHER_INVITE_CODE: str = "SARS_TEACHER_2025"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
+    ENVIRONMENT: str = "development"
+    DEBUG: bool = True
 
     class Config:
         env_file = os.path.join(_BACKEND_DIR, ".env")

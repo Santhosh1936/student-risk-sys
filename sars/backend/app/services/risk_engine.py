@@ -23,6 +23,51 @@ from ..models.models import (
 logger = logging.getLogger(__name__)
 
 
+def compute_cgpa(student_id: int, db: Session):
+    """
+    Compute CGPA using the official JNTUH credits-weighted formula:
+      CGPA = Σ(SGPA_i × credits_attempted_i) / Σ(credits_attempted_i)
+
+    Returns None if no semester records exist or all records lack
+    credit data. Returns a float rounded to 2 decimal places.
+
+    This is the ONLY correct way to compute CGPA for JNTUH students.
+    Simple average of SGPAs is WRONG because semesters have
+    different credit loads (labs = 1.5cr, theory = 3cr etc.)
+    """
+    records = (
+        db.query(SemesterRecord)
+        .filter(SemesterRecord.student_id == student_id)
+        .all()
+    )
+
+    if not records:
+        return None
+
+    total_weighted_points = 0.0
+    total_credits = 0.0
+
+    for rec in records:
+        sgpa = float(rec.gpa) if rec.gpa is not None else None
+        credits = (
+            float(rec.credits_attempted)
+            if rec.credits_attempted is not None
+            else None
+        )
+
+        # Skip semesters with missing data
+        if sgpa is None or credits is None or credits == 0:
+            continue
+
+        total_weighted_points += sgpa * credits
+        total_credits += credits
+
+    if total_credits == 0:
+        return None
+
+    return round(total_weighted_points / total_credits, 2)
+
+
 def compute_risk_score(student_id: int, db: Session) -> dict:
     """
     Compute SARS risk score for a student and save to risk_scores table.
@@ -44,10 +89,10 @@ def compute_risk_score(student_id: int, db: Session) -> dict:
     )
     semesters_analyzed = len(records)
 
-    # -- Compute CGPA as mean of all available SGPAs --------------------------
-    valid_gpas = [float(r.gpa) for r in records if r.gpa is not None]
-    if valid_gpas:
-        cgpa = sum(valid_gpas) / len(valid_gpas)
+    # -- Compute CGPA using credits-weighted JNTUH formula --------------------
+    computed_cgpa = compute_cgpa(student_id, db)
+    if computed_cgpa is not None:
+        cgpa = computed_cgpa
     else:
         cgpa = float(student.cgpa) if student.cgpa else 0.0
 
@@ -75,15 +120,15 @@ def compute_risk_score(student_id: int, db: Session) -> dict:
     # COMPONENT 1 -- GPA Risk (40%)
     # =========================================================================
 
-    gpa_risk = max(0.0, (7.0 - cgpa) / 7.0) * 100.0
+    gpa_risk = max(0.0, (7.5 - cgpa) / 7.5) * 100.0
 
     # GPA trend bonus/deduction
     trend_direction = "stable"
     trend_bonus = 0.0
 
     if semesters_analyzed >= 2:
-        latest_gpa = float(records[-1].gpa) if records[-1].gpa else cgpa
-        prev_gpa = float(records[-2].gpa) if records[-2].gpa else cgpa
+        latest_gpa = float(records[-1].gpa) if records[-1].gpa is not None else cgpa
+        prev_gpa = float(records[-2].gpa) if records[-2].gpa is not None else cgpa
         trend = latest_gpa - prev_gpa
 
         if trend < -0.5:
@@ -105,7 +150,20 @@ def compute_risk_score(student_id: int, db: Session) -> dict:
     # COMPONENT 2 -- Backlog Risk (35%)
     # =========================================================================
 
-    backlog_risk = min(100.0, float(total_backlogs) * 20.0)
+    # Non-linear backlog risk: steeper penalty as backlog count grows
+    # 0→0, 1→40, 2→60, 3→80, 4→90, 5+→100
+    if total_backlogs == 0:
+        backlog_risk = 0.0
+    elif total_backlogs == 1:
+        backlog_risk = 40.0
+    elif total_backlogs == 2:
+        backlog_risk = 60.0
+    elif total_backlogs == 3:
+        backlog_risk = 80.0
+    elif total_backlogs == 4:
+        backlog_risk = 90.0
+    else:
+        backlog_risk = 100.0
 
     # =========================================================================
     # COMPONENT 3 -- Attendance Risk (25%)
@@ -153,6 +211,21 @@ def compute_risk_score(student_id: int, db: Session) -> dict:
     else:
         risk_level = "HIGH"
 
+    # -- Placement-policy floors (SNIST placement cutoff: CGPA 7.5) -----------
+    # CGPA-based floors
+    if cgpa < 5.0 and risk_level != "HIGH":
+        risk_level = "HIGH"
+    elif cgpa < 7.0 and risk_level in ("LOW", "WATCH"):
+        risk_level = "MODERATE"
+    elif cgpa < 7.5 and risk_level == "LOW":
+        risk_level = "WATCH"
+
+    # Backlog-based floors: 1-2 → MODERATE, 3+ → HIGH
+    if total_backlogs >= 3 and risk_level != "HIGH":
+        risk_level = "HIGH"
+    elif total_backlogs >= 1 and risk_level in ("LOW", "WATCH"):
+        risk_level = "MODERATE"
+
     # -- Confidence -----------------------------------------------------------
     if semesters_analyzed >= 2 and has_attendance:
         confidence = 1.0
@@ -192,11 +265,7 @@ def compute_risk_score(student_id: int, db: Session) -> dict:
     student.cgpa = round(cgpa, 2)
 
     # -- Save to risk_scores table --------------------------------------------
-    # Delete previous score and insert fresh one
-    db.query(RiskScore).filter(
-        RiskScore.student_id == student_id
-    ).delete()
-
+    # Insert new risk score row (history is preserved)
     risk_row = RiskScore(
         student_id=student_id,
         computed_at=datetime.now(timezone.utc),
@@ -254,20 +323,31 @@ def _generate_advisory_text(
 
     if cgpa < 5.0:
         lines.append(
-            f"Your CGPA of {cgpa:.2f} is below the minimum "
-            "threshold. Focus on core subjects immediately."
+            f"Your CGPA of {cgpa:.2f} is critically low. "
+            "Focus on core subjects immediately."
         )
-    elif cgpa < 6.5:
+    elif cgpa < 7.0:
         lines.append(
-            f"Your CGPA of {cgpa:.2f} needs improvement. "
-            "Aim to score above 7.0 in upcoming semesters."
+            f"Your CGPA of {cgpa:.2f} needs significant improvement. "
+            "A CGPA of 7.5+ is required for most campus placements."
+        )
+    elif cgpa < 7.5:
+        lines.append(
+            f"Your CGPA of {cgpa:.2f} is borderline for placements. "
+            "Aim to push above 7.5 to unlock full placement eligibility."
         )
 
-    if backlogs > 0:
+    if backlogs >= 3:
         lines.append(
-            f"You have {backlogs} backlog subject"
-            f"{'s' if backlogs > 1 else ''}. "
-            "Clearing backlogs should be your top priority."
+            f"You have {backlogs} active backlog subjects — this is HIGH risk. "
+            "You are completely ineligible for campus placements until all backlogs are cleared. "
+            "Meet your academic advisor immediately."
+        )
+    elif backlogs > 0:
+        lines.append(
+            f"You have {backlogs} active backlog subject{'s' if backlogs > 1 else ''}. "
+            "Students with any backlog are not eligible for campus placements. "
+            "Clearing all backlogs must be your top priority."
         )
 
     if trend == "declining_sharply":

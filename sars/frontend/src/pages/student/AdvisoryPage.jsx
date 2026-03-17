@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
+import ReactMarkdown from 'react-markdown';
 
 const SUGGESTIONS = [
   "What is my current academic risk level?",
@@ -24,13 +25,29 @@ export default function AdvisoryPage() {
       .then(r => {
         setMessages(r.data.messages || []);
       })
-      .catch(console.error)
+      .catch(() => {
+        const errMsg = {
+          id: Date.now(), role: 'model',
+          content: 'Could not load chat history. Start a new conversation below.',
+          isError: true, created_at: new Date().toISOString(),
+        };
+        setMessages([errMsg]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = bottomRef.current?.parentElement;
+    if (!container) return;
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+    if (isNearBottom || messages[messages.length-1]?.role === 'user') {
+      const timerId = setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return () => clearTimeout(timerId);
+    }
   }, [messages]);
 
   const sendMessage = async (text) => {
@@ -86,7 +103,7 @@ export default function AdvisoryPage() {
   };
 
   if (loading) return (
-    <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
+    <div style={{ textAlign: 'center', padding: 60, color: '#64748b' }}>
       Loading your chat history...
     </div>
   );
@@ -97,10 +114,10 @@ export default function AdvisoryPage() {
 
       {/* ── Header ───────────────────────────────────────────────── */}
       <div style={{ marginBottom: 16 }}>
-        <h2 style={{ color: '#1e3a5f', margin: '0 0 4px' }}>
+        <h2 style={{ color: '#f1f5f9', margin: '0 0 4px' }}>
           🎓 SARS Advisor
         </h2>
-        <p style={{ color: '#888', fontSize: 13, margin: 0 }}>
+        <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
           Your personal AI academic advisor — knows your full
           academic history and risk profile.
         </p>
@@ -108,9 +125,9 @@ export default function AdvisoryPage() {
 
       {/* ── Data refresh banner ───────────────────────────────────── */}
       {refreshed && (
-        <div style={{ background: '#f0fff4', border: '1px solid #9ae6b4',
+        <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.3)',
                       borderRadius: 8, padding: '10px 16px',
-                      marginBottom: 12, fontSize: 13, color: '#276749' }}>
+                      marginBottom: 12, fontSize: 13, color: '#34d399' }}>
           ✅ Your latest academic data has been loaded into this
           conversation automatically.
         </div>
@@ -124,10 +141,10 @@ export default function AdvisoryPage() {
         {messages.length === 0 && !loading && (
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🤖</div>
-            <h3 style={{ color: '#1e3a5f', margin: '0 0 8px' }}>
+            <h3 style={{ color: '#f1f5f9', margin: '0 0 8px' }}>
               Hello! I'm your SARS Advisor
             </h3>
-            <p style={{ color: '#666', fontSize: 14, marginBottom: 24 }}>
+            <p style={{ color: '#64748b', fontSize: 14, marginBottom: 24 }}>
               I know your grades, CGPA, backlogs, and risk score.
               Ask me anything about your academics.
             </p>
@@ -136,9 +153,9 @@ export default function AdvisoryPage() {
                           gap: 8, justifyContent: 'center' }}>
               {SUGGESTIONS.map((s, i) => (
                 <button key={i} onClick={() => sendMessage(s)}
-                  style={{ padding: '8px 14px', background: '#f0f4f8',
-                           border: '1px solid #dde4ed', borderRadius: 20,
-                           fontSize: 13, color: '#1e3a5f',
+                  style={{ padding: '8px 14px', background: '#1e293b',
+                           border: '1px solid #263348', borderRadius: 20,
+                           fontSize: 13, color: '#94a3b8',
                            cursor: 'pointer' }}>
                   {s}
                 </button>
@@ -161,14 +178,26 @@ export default function AdvisoryPage() {
                 : '18px 18px 18px 4px',
               background: msg.role === 'user'
                 ? '#1e3a5f'
-                : msg.isError ? '#fff0f0' : '#f0f4f8',
-              color: msg.role === 'user' ? '#fff' : '#2d3748',
+                : msg.isError ? 'rgba(248,113,113,0.08)' : '#1e293b',
+              color: msg.role === 'user' ? '#fff' : '#f1f5f9',
               fontSize: 14,
               lineHeight: 1.6,
-              whiteSpace: 'pre-wrap',
-              border: msg.isError ? '1px solid #f5c6c6' : 'none',
+              whiteSpace: msg.role === 'user' ? 'pre-wrap' : undefined,
+              border: msg.isError ? '1px solid rgba(248,113,113,0.3)' : 'none',
             }}>
-              {msg.content}
+              {msg.role === 'model' && !msg.isError ? (
+                <ReactMarkdown
+                  components={{
+                    p: ({children}) => <p style={{margin:'4px 0',lineHeight:1.6}}>{children}</p>,
+                    strong: ({children}) => <strong style={{color:'#f1f5f9'}}>{children}</strong>,
+                    ul: ({children}) => <ul style={{paddingLeft:18,margin:'4px 0'}}>{children}</ul>,
+                    li: ({children}) => <li style={{margin:'2px 0'}}>{children}</li>,
+                    h3: ({children}) => <h3 style={{color:'#93c5fd',margin:'8px 0 4px',fontSize:14}}>{children}</h3>,
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              ) : msg.content}
               <div style={{ fontSize: 11, marginTop: 4,
                             opacity: 0.6, textAlign: 'right' }}>
                 {msg.created_at
@@ -183,11 +212,26 @@ export default function AdvisoryPage() {
 
         {/* Typing indicator */}
         {sending && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{ padding: '12px 16px', background: '#f0f4f8',
-                          borderRadius: '18px 18px 18px 4px',
-                          fontSize: 20, color: '#888' }}>
-              ✦ ✦ ✦
+          <div style={{ display:'flex', justifyContent:'flex-start', marginBottom: 16 }}>
+            <div style={{
+              padding:'12px 16px', background:'#1e293b',
+              borderRadius:'18px 18px 18px 4px',
+              display:'flex', gap:4, alignItems:'center',
+            }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{
+                  width:8, height:8, borderRadius:'50%',
+                  background:'#94a3b8',
+                  animation:'bounce 1.2s infinite',
+                  animationDelay:`${i*0.2}s`,
+                }}/>
+              ))}
+              <style>{`
+                @keyframes bounce {
+                  0%,60%,100%{transform:translateY(0)}
+                  30%{transform:translateY(-6px)}
+                }
+              `}</style>
             </div>
           </div>
         )}
@@ -202,9 +246,9 @@ export default function AdvisoryPage() {
           {SUGGESTIONS.slice(0, 3).map((s, i) => (
             <button key={i} onClick={() => sendMessage(s)}
               disabled={sending}
-              style={{ padding: '6px 12px', background: '#f0f4f8',
-                       border: '1px solid #dde4ed', borderRadius: 16,
-                       fontSize: 12, color: '#1e3a5f',
+              style={{ padding: '6px 12px', background: '#1e293b',
+                       border: '1px solid #263348', borderRadius: 16,
+                       fontSize: 12, color: '#94a3b8',
                        cursor: sending ? 'not-allowed' : 'pointer' }}>
               {s}
             </button>
@@ -214,7 +258,7 @@ export default function AdvisoryPage() {
 
       {/* ── Input bar ─────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 10, paddingTop: 12,
-                    borderTop: '1px solid #e0e8f0' }}>
+                    borderTop: '1px solid #1e293b' }}>
         <textarea
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -223,10 +267,11 @@ export default function AdvisoryPage() {
           disabled={sending}
           rows={2}
           style={{ flex: 1, padding: '10px 14px', borderRadius: 12,
-                   border: '1px solid #dde4ed', fontSize: 14,
+                   border: '1px solid #1e293b', fontSize: 14,
                    resize: 'none', outline: 'none',
                    fontFamily: 'inherit', lineHeight: 1.5,
-                   background: sending ? '#f9f9f9' : '#fff' }}
+                   background: sending ? '#0a0f1e' : '#111827',
+                   color: '#f1f5f9' }}
         />
         <button onClick={() => sendMessage()} disabled={sending || !input.trim()}
           style={{ padding: '0 22px', background:
@@ -238,7 +283,7 @@ export default function AdvisoryPage() {
           ➤
         </button>
       </div>
-      <div style={{ fontSize: 11, color: '#aaa',
+      <div style={{ fontSize: 11, color: '#475569',
                     textAlign: 'center', marginTop: 6 }}>
         Press Enter to send · Shift+Enter for new line
       </div>

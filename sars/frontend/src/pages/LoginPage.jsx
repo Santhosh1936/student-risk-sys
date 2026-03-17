@@ -34,9 +34,10 @@ export default function LoginPage() {
   const [fullName, setFullName]   = useState("");
   const [rollNumber, setRollNumber] = useState("");
   const [branch, setBranch]       = useState(BRANCHES[0]);
-  const [enrollYear, setEnrollYear] = useState(new Date().getFullYear());
+  const [enrollYear, setEnrollYear] = useState(String(new Date().getFullYear()));
   const [department, setDepartment] = useState("");
   const [employeeId, setEmployeeId] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,7 +57,7 @@ export default function LoginPage() {
           email, password, role, full_name: fullName,
           ...(role === "student"
             ? { roll_number: rollNumber, branch, enrollment_year: parseInt(enrollYear) }
-            : { department, employee_id: employeeId }),
+            : { department, employee_id: employeeId, invite_code: inviteCode }),
         };
         const res = await register(payload);
         if (!res.success) {
@@ -132,7 +133,12 @@ export default function LoginPage() {
             placeholder="you@university.edu" required />
 
           <Field label="Password" type="password" value={password} onChange={setPassword}
-            placeholder={tab === "register" ? "Min. 6 characters" : "••••••••"} required />
+            placeholder={tab === "register" ? "Min. 8 chars, 1 uppercase, 1 number" : "••••••••"} required />
+          {tab === "register" && (
+            <p style={{ fontSize: 11, color: "#64748b", margin: "-8px 0 0", lineHeight: 1.5 }}>
+              Requires: 8+ characters · 1 uppercase letter · 1 number
+            </p>
+          )}
 
           {/* Student-only register fields */}
           {tab === "register" && role === "student" && (
@@ -150,7 +156,7 @@ export default function LoginPage() {
                 </select>
               </div>
               <Field label="Enrollment Year" type="number" value={enrollYear}
-                onChange={setEnrollYear} placeholder="2021" min="2015" max="2025" />
+                onChange={setEnrollYear} placeholder="2021" min="2015" max={new Date().getFullYear()} />
             </>
           )}
 
@@ -161,6 +167,8 @@ export default function LoginPage() {
                 placeholder="Computer Science" />
               <Field label="Employee ID" value={employeeId} onChange={setEmployeeId}
                 placeholder="FAC2024001" />
+              <Field label="Faculty Invite Code" value={inviteCode} onChange={setInviteCode}
+                placeholder="Obtain from your administrator" required />
             </>
           )}
 

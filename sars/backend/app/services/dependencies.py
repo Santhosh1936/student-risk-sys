@@ -15,7 +15,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user_id = payload.get("sub")
     if not user_id: raise exc
     user = get_user_by_id(db, int(user_id))
-    if not user or not user.is_active: raise exc
+    if not user: raise exc
+    if not user.is_active:
+        raise HTTPException(
+            403,
+            "This account has been deactivated. Contact your administrator."
+        )
     return user
 
 def require_student(u: User = Depends(get_current_user)) -> User:

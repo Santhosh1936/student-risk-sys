@@ -7,7 +7,7 @@ Uses Google Gemini 2.5 Flash for responses.
 Architecture:
   - Each student has one ChatThread (created on first message)
   - Full academic context injected ONCE as seed on first message
-  - Last 10 messages sent as conversation history on every call
+  - Last 6 messages sent as conversation history on every call
   - When new semester uploaded, data_updated=True flag set
   - On next message after update, refresh context injected automatically
   - Student data never mixed between different students
@@ -27,7 +27,7 @@ from ..models.models import (
 
 logger = logging.getLogger(__name__)
 
-HISTORY_WINDOW = 10   # how many past messages to send to Gemini
+HISTORY_WINDOW = 6    # how many past messages to send to Gemini
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -56,7 +56,7 @@ def _build_student_context(student_id: int, db: Session) -> str:
         .all()
     )
 
-    semesters_data = []
+    flat_subjects_lines = []
     all_backlogs = []
 
     for rec in records:
@@ -65,38 +65,20 @@ def _build_student_context(student_id: int, db: Session) -> str:
             .filter(SubjectGrade.semester_record_id == rec.id)
             .all()
         )
-        subject_list = []
+        flat_subjects_lines.append(
+            f"  Semester {rec.semester_no} (SGPA: {rec.gpa})"
+        )
         for s in subjects:
-            subject_list.append({
-                "code": s.subject_code,
-                "name": s.subject_name,
-                "grade": s.grade_letter,
-                "points": s.grade_points,
-                "credits": s.credits,
-                "backlog": s.is_backlog,
-            })
             if s.is_backlog:
                 all_backlogs.append(
                     f"{s.subject_name} (Sem {rec.semester_no})"
                 )
-        semesters_data.append({
-            "semester_no": rec.semester_no,
-            "sgpa": rec.gpa,
-            "credits_attempted": rec.credits_attempted,
-            "credits_earned": rec.credits_earned,
-            "subjects": subject_list,
-        })
-
-    # Build a flat, human-readable subject table for easier AI parsing
-    flat_subjects_lines = []
-    for sem in semesters_data:
-        flat_subjects_lines.append(f"  Semester {sem['semester_no']} (SGPA: {sem['sgpa']})")
-        for subj in sem["subjects"]:
-            backlog_marker = " ← BACKLOG" if subj["backlog"] else ""
+            backlog_marker = " ← BACKLOG" if s.is_backlog else ""
             flat_subjects_lines.append(
-                f"    • {subj['name']} ({subj['code'] or 'N/A'}): "
-                f"Grade {subj['grade']} | {subj['points']} pts | {subj['credits']} credits{backlog_marker}"
+                f"    • {s.subject_name} ({s.subject_code or 'N/A'}): "
+                f"Grade {s.grade_letter} | {s.grade_points} pts | {s.credits} credits{backlog_marker}"
             )
+
     flat_subjects_text = "\n".join(flat_subjects_lines) if flat_subjects_lines else "No subjects uploaded yet."
 
     # Attendance
@@ -151,9 +133,6 @@ Backlog List  : {', '.join(all_backlogs) if all_backlogs else 'None'}
 
 COMPLETE SUBJECT LIST (ALL SEMESTERS — USE THESE EXACT NAMES):
 {flat_subjects_text}
-
-SEMESTER-WISE ACADEMIC RECORD (DETAILED JSON):
-{json.dumps(semesters_data, indent=2)}
 
 ATTENDANCE DATA:
 {json.dumps(attendance_data, indent=2) if attendance_data
@@ -255,7 +234,9 @@ def _get_recent_history(thread_id: int, db: Session) -> list:
         db.query(ChatMessage)
         .filter(
             ChatMessage.thread_id == thread_id,
-            ChatMessage.message_type != "context_seed"
+            ChatMessage.message_type.notin_(
+                ["context_seed", "data_refresh"]
+            )
         )
         .order_by(ChatMessage.created_at.desc())
         .limit(HISTORY_WINDOW)
@@ -377,7 +358,7 @@ def send_message(
       3. If data_updated=True (new semester uploaded since last chat):
            Inject refresh message with updated profile
            Save as data_refresh message, set data_updated=False
-      4. Fetch last 10 messages as conversation history
+      4. Fetch last 6 messages as conversation history
       5. Call Gemini with system prompt + history + user message
       6. Save user message + AI response to DB
       7. Update thread.last_active

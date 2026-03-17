@@ -44,34 +44,38 @@ class Teacher(Base):
 class SemesterRecord(Base):
     __tablename__ = "semester_records"
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
     semester_no = Column(Integer, nullable=False)
     gpa = Column(Float, nullable=True)
-    credits_attempted = Column(Integer, nullable=True)
-    credits_earned = Column(Integer, nullable=True)
+    credits_attempted = Column(Float, nullable=True)
+    credits_earned = Column(Float, nullable=True)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     is_confirmed = Column(Boolean, default=False)
     student = relationship("Student", back_populates="semester_records")
-    subject_grades = relationship("SubjectGrade", back_populates="semester_record")
+    subjects = relationship(
+        "SubjectGrade",
+        back_populates="semester_record",
+        cascade="all, delete-orphan"
+    )
 
 class SubjectGrade(Base):
     __tablename__ = "subject_grades"
     id = Column(Integer, primary_key=True, index=True)
-    semester_record_id = Column(Integer, ForeignKey("semester_records.id"), nullable=False)
+    semester_record_id = Column(Integer, ForeignKey("semester_records.id"), nullable=False, index=True)
     subject_name = Column(String, nullable=False)
     subject_code = Column(String, nullable=True)
     marks_obtained = Column(Float, nullable=True)
     max_marks = Column(Float, default=100)
     grade_letter = Column(String, nullable=True)    # O, A+, A, B+, B, C, D, F
     grade_points = Column(Float, nullable=True)     # 10, 9, 8, 7, 6, 5, 4, 0
-    credits = Column(Integer, nullable=True)
+    credits = Column(Float, nullable=True)      # Float for half-credits (1.5cr labs)
     is_backlog = Column(Boolean, default=False)
-    semester_record = relationship("SemesterRecord", back_populates="subject_grades")
+    semester_record = relationship("SemesterRecord", back_populates="subjects")
 
 class AttendanceRecord(Base):
     __tablename__ = "attendance_records"
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
     semester_no = Column(Integer, nullable=False)
     subject_name = Column(String, nullable=False)
     classes_attended = Column(Integer, default=0)
@@ -82,9 +86,9 @@ class AttendanceRecord(Base):
 class RiskScore(Base):
     __tablename__ = "risk_scores"
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
     computed_at = Column(DateTime(timezone=True), server_default=func.now())
-    sars_score = Column(Float, nullable=False)         # 0.0 to 1.0
+    sars_score = Column(Float, nullable=False)         # 0.0 to 100.0
     risk_level = Column(String, nullable=False)        # LOW, WATCH, MODERATE, HIGH
     confidence = Column(Float, nullable=True)
     factor_breakdown = Column(JSON, nullable=True)
@@ -94,8 +98,8 @@ class RiskScore(Base):
 class Intervention(Base):
     __tablename__ = "interventions"
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
-    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False, index=True)
     intervention_type = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -138,7 +142,7 @@ class ChatMessage(Base):
 
     id           = Column(Integer, primary_key=True, index=True)
     thread_id    = Column(Integer, ForeignKey("chat_threads.id"),
-                          nullable=False)
+                          nullable=False, index=True)
     role         = Column(String, nullable=False)   # "user" or "model"
     content      = Column(Text, nullable=False)
     created_at   = Column(DateTime(timezone=True),
