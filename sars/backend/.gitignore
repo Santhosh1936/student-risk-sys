@@ -30,3 +30,7 @@ htmlcov/
 # IDE
 .vscode/
 .idea/
+
+# Vector database
+chroma_db/
+*.chroma

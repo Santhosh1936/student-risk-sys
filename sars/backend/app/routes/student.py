@@ -8,10 +8,10 @@ from pydantic import BaseModel
 from typing import Optional, List
 from ..database import get_db
 from ..services.dependencies import require_student
-from ..models.models import User, Student, SemesterRecord, SubjectGrade, AttendanceRecord
+from ..models.models import User, Student, SemesterRecord, SubjectGrade, AttendanceRecord, ChatThread
 from ..services.grade_extractor import extract_from_file, get_gemini_status
 from ..services.risk_engine import compute_risk_score, get_student_risk, compute_cgpa
-from ..services.advisor import send_message as advisor_send, get_chat_history as advisor_history, mark_data_updated
+from ..services.advisor import send_message as advisor_send, get_chat_history as advisor_history
 
 import logging
 logger = logging.getLogger(__name__)
@@ -48,6 +48,14 @@ def _check_chat_rate(student_id: int):
             "Chat rate limit reached. Please wait a minute before sending more messages.",
         )
     _chat_attempts[student_id].append(now)
+
+
+def _set_thread_data_updated(student_id: int, db: Session, value: bool) -> None:
+    thread = db.query(ChatThread).filter(ChatThread.student_id == student_id).first()
+    if not thread:
+        return
+    thread.data_updated = value
+    db.commit()
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "uploads")
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png"}
@@ -291,11 +299,17 @@ def confirm_marksheet(
         logger.warning(f"Auto risk computation failed: {e}")
         # Do not block the confirm response if risk fails
 
-    # Mark chat thread for data refresh after new semester upload
+    _set_thread_data_updated(student.id, db, True)
+
+    # Trigger RAG re-indexing after new semester upload
     try:
-        mark_data_updated(student.id, db)
+        from ..services import rag_service
+        rag_service.index_student(student.id, db)
+        _set_thread_data_updated(student.id, db, False)
+        logger.info(f"RAG index updated for student {student.id}")
     except Exception as e:
-        logger.warning(f"Chat refresh flag failed: {e}")
+        logger.warning(f"RAG indexing failed for student {student.id}: {e}")
+        # Non-blocking - continue even if indexing fails
 
     return {
         "message": f"Semester {data.semester_no} saved successfully.",
@@ -511,6 +525,17 @@ def submit_attendance(
     except Exception as e:
         logger.warning(f"Risk recompute after attendance update failed: {e}")
 
+    _set_thread_data_updated(student.id, db, True)
+
+    # Trigger RAG re-indexing after attendance update
+    try:
+        from ..services import rag_service
+        rag_service.index_student(student.id, db)
+        _set_thread_data_updated(student.id, db, False)
+        logger.info(f"RAG index updated for student {student.id} after attendance")
+    except Exception as e:
+        logger.warning(f"RAG indexing failed after attendance update: {e}")
+
     return {
         "message": f"Attendance for semester {data.semester_no} saved.",
         "semester_no": data.semester_no,
@@ -644,6 +669,24 @@ def advisor_get_history(
 
     history = advisor_history(student.id, db)
     return {"messages": history, "count": len(history)}
+
+
+@router.get("/rag-status")
+def get_rag_status(
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+):
+    """
+    Get RAG indexing status for current student.
+    Returns: {indexed: bool, chunk_count: int, last_indexed: str | None}
+    """
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student profile not found")
+
+    from ..services import rag_service
+    status = rag_service.get_rag_status(student.id, db)
+    return status
 
 
 # ── BA-07: Update student profile ────────────────────────────────────────────
