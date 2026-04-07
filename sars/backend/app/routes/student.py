@@ -297,6 +297,13 @@ def confirm_marksheet(
     except Exception as e:
         logger.warning(f"Chat refresh flag failed: {e}")
 
+    # Best-effort RAG refresh after marksheet confirmation
+    try:
+        from ..services.rag_service import index_student
+        index_student(student.id, db)
+    except Exception as e:
+        logger.warning(f"RAG index failed: {e}")
+
     return {
         "message": f"Semester {data.semester_no} saved successfully.",
         "semester_record_id": record.id,
@@ -437,6 +444,19 @@ def delete_semester(
     except Exception as e:
         logger.warning(f"Risk recompute after delete failed: {e}")
 
+    # Mark advisor context stale after semester deletion
+    try:
+        mark_data_updated(student.id, db)
+    except Exception as e:
+        logger.warning(f"Chat refresh flag failed after semester delete: {e}")
+
+    # Best-effort RAG refresh after semester deletion
+    try:
+        from ..services.rag_service import index_student
+        index_student(student.id, db)
+    except Exception as e:
+        logger.warning(f"RAG index failed after semester delete: {e}")
+
     # Update current_semester to reflect remaining records
     remaining = (
         db.query(SemesterRecord)
@@ -510,6 +530,19 @@ def submit_attendance(
         compute_risk_score(student.id, db)
     except Exception as e:
         logger.warning(f"Risk recompute after attendance update failed: {e}")
+
+    # Mark advisor context stale after attendance update
+    try:
+        mark_data_updated(student.id, db)
+    except Exception as e:
+        logger.warning(f"Chat refresh flag failed after attendance update: {e}")
+
+    # Best-effort RAG refresh after attendance update
+    try:
+        from ..services.rag_service import index_student
+        index_student(student.id, db)
+    except Exception as e:
+        logger.warning(f"RAG index failed: {e}")
 
     return {
         "message": f"Attendance for semester {data.semester_no} saved.",
@@ -586,6 +619,19 @@ def delete_attendance(
     except Exception as e:
         logger.warning(f"Risk recompute after attendance delete failed: {e}")
 
+    # Mark advisor context stale after attendance deletion
+    try:
+        mark_data_updated(student.id, db)
+    except Exception as e:
+        logger.warning(f"Chat refresh flag failed after attendance delete: {e}")
+
+    # Best-effort RAG refresh after attendance deletion
+    try:
+        from ..services.rag_service import index_student
+        index_student(student.id, db)
+    except Exception as e:
+        logger.warning(f"RAG index failed after attendance delete: {e}")
+
     return {"message": f"Attendance for semester {semester_no} deleted."}
 
 
@@ -646,6 +692,29 @@ def advisor_get_history(
     return {"messages": history, "count": len(history)}
 
 
+@router.get("/rag-status")
+def rag_status(
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db)
+):
+    student = db.query(Student).filter(
+        Student.user_id == current_user.id
+    ).first()
+    if not student:
+        raise HTTPException(404, "Student profile not found.")
+
+    try:
+        from ..services.rag_service import get_rag_status
+        return get_rag_status(student.id)
+    except Exception as e:
+        logger.warning(f"RAG status failed: {e}")
+        return {
+            "indexed": False,
+            "chunk_count": 0,
+            "chunk_types": [],
+        }
+
+
 # ── BA-07: Update student profile ────────────────────────────────────────────
 
 class UpdateProfileRequest(BaseModel):
@@ -672,4 +741,16 @@ def update_profile(
     if request.branch is not None:
         student.branch = request.branch.strip()
     db.commit()
+
+    try:
+        mark_data_updated(student.id, db)
+    except Exception as e:
+        logger.warning(f"Chat refresh flag failed after profile update: {e}")
+
+    try:
+        from ..services.rag_service import index_student
+        index_student(student.id, db)
+    except Exception as e:
+        logger.warning(f"RAG index failed after profile update: {e}")
+
     return {"message": "Profile updated successfully."}

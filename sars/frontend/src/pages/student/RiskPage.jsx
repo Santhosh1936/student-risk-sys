@@ -33,6 +33,14 @@ const getBacklogEmoji = (count) => {
   return '🚨';
 };
 
+const getAttendanceEmoji = (avgAttendance) => {
+  if (avgAttendance === null || avgAttendance === undefined) return '📭';
+  if (avgAttendance >= 90) return '🟢';
+  if (avgAttendance >= 75) return '🟢';
+  if (avgAttendance >= 60) return '🟡';
+  return '🔴';
+};
+
 function FactorBar({ label, emoji, sublabel, score, color, tags, onToggleRange, children }) {
   return (
     <div style={{ marginBottom: 16 }}>
@@ -472,6 +480,65 @@ export default function RiskPage() {
                         {r.range}
                       </span>
                       <span style={{ color: '#475569', marginLeft: 4 }}>— {r.label}</span>
+                      {r.active && (
+                        <span style={{ marginLeft: 6, fontSize: 10,
+                                       color: '#93c5fd', fontWeight: 700 }}>
+                          ← You are here
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </FactorBar>
+
+          <FactorBar
+            label="Attendance Risk"
+            emoji={getAttendanceEmoji(fb.avg_attendance)}
+            sublabel={`Average attendance: ${fb.avg_attendance ?? 'No data'}${fb.avg_attendance !== null && fb.avg_attendance !== undefined ? '%' : ''}`}
+            score={fb.attendance_risk}
+            color="#a855f7"
+            onToggleRange={() => toggleRange('attendance')}
+          >
+            {showRange.attendance && (
+              <div style={{ background: '#0f172a', border: '1px solid #334155',
+                            borderRadius: 8, padding: '10px 12px',
+                            marginTop: 8, marginBottom: 4, fontSize: 11 }}>
+                <div style={{ color: '#94a3b8', fontWeight: 600,
+                              marginBottom: 6, fontSize: 11 }}>
+                  📊 What attendance causes what risk:
+                </div>
+                {[
+                  { dot: '🟢', range: '>= 90%',
+                    label: 'Excellent attendance',
+                    active: fb.avg_attendance !== null && fb.avg_attendance !== undefined && fb.avg_attendance >= 90 },
+                  { dot: '🟢', range: '75-89%',
+                    label: 'Above 75% minimum requirement',
+                    active: fb.avg_attendance !== null && fb.avg_attendance !== undefined && fb.avg_attendance >= 75 && fb.avg_attendance < 90 },
+                  { dot: '🟡', range: '60-74%',
+                    label: 'Below 75% - exam eligibility at risk',
+                    active: fb.avg_attendance !== null && fb.avg_attendance !== undefined && fb.avg_attendance >= 60 && fb.avg_attendance < 75 },
+                  { dot: '🔴', range: '< 60%',
+                    label: 'Critical - may lose exam eligibility',
+                    active: fb.avg_attendance !== null && fb.avg_attendance !== undefined && fb.avg_attendance < 60 },
+                  { dot: '📭', range: 'No data',
+                    label: 'Upload attendance for accurate scoring',
+                    active: fb.avg_attendance === null || fb.avg_attendance === undefined },
+                ].map((r, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 6,
+                    padding: '3px 6px', borderRadius: 5, marginBottom: 2,
+                    background: r.active ? 'rgba(59,130,246,0.12)' : 'transparent',
+                    border: r.active ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
+                  }}>
+                    <span style={{ fontSize: 11, flexShrink: 0 }}>{r.dot}</span>
+                    <div>
+                      <span style={{ fontWeight: r.active ? 700 : 400,
+                                     color: r.active ? '#93c5fd' : '#64748b' }}>
+                        {r.range}
+                      </span>
+                      <span style={{ color: '#475569', marginLeft: 4 }}>- {r.label}</span>
                       {r.active && (
                         <span style={{ marginLeft: 6, fontSize: 10,
                                        color: '#93c5fd', fontWeight: 700 }}>

@@ -16,7 +16,10 @@ import base64
 import logging
 from io import BytesIO
 
-import fitz                         # PyMuPDF — PDF to image
+try:
+    import fitz                         # PyMuPDF — PDF to image
+except ImportError:
+    fitz = None
 from PIL import Image, ImageEnhance
 import requests
 
@@ -46,6 +49,10 @@ def _prepare_image(file_path: str) -> tuple:
     ext = os.path.splitext(file_path)[1].lower()
 
     if ext == ".pdf":
+        if fitz is None:
+            raise ValueError(
+                "PDF support requires PyMuPDF. Install with: pip install PyMuPDF"
+            )
         doc = fitz.open(file_path)
         page = doc[0]
         pix = page.get_pixmap(matrix=fitz.Matrix(3.0, 3.0), alpha=False)

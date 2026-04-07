@@ -21,6 +21,7 @@ env/
 
 # Uploads (user-uploaded marksheet files)
 uploads/
+chroma_db/
 
 # Pytest / coverage
 .pytest_cache/
