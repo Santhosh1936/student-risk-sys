@@ -1,0 +1,69 @@
+\chapter{Conclusion and Future Scope}
+
+\section{Conclusion}
+This project report presented SARS, an Explainable Agentic RAG-Based Student Academic Performance Risk Assessment and Advisory System designed to improve the interpretation of academic records in higher education. The system integrates document-based grade ingestion, structured storage, transparent academic risk computation, and evidence-grounded advisory support into a single workflow.
+
+The project demonstrates that an academic support platform can be both practical and explainable. Rather than producing opaque predictions, SARS exposes the role of CGPA, backlog, attendance, and semester trend behavior in determining academic risk. It also extends beyond analytics by providing personalized advisory and teacher-side intervention support.
+
+\section{Summary of Achievements}
+Across the implementation and evaluation stages, the project achieved the following:
+\begin{itemize}[leftmargin=*]
+\item creation of a two-stage marksheet extraction and verification pipeline,
+\item structured semester-wise academic persistence with subject-level detail,
+\item credits-weighted CGPA computation aligned with institutional interpretation,
+\item explainable SARS risk scoring with factor breakdown and policy floors,
+\item student-facing dashboards for records, risk, attendance, and advisory,
+\item teacher-facing dashboards for cohort monitoring, analytics, and interventions,
+\item retrieval-grounded advisory generation using student-specific academic chunks.
+\end{itemize}
+
+\section{Research and Practical Contributions}
+The principal contributions of the project can be viewed from both academic and operational perspectives.
+
+\begin{table}[H]
+\centering
+\caption{Contribution Summary of the SARS Project}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.24\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Contribution Area} & \textbf{Contribution} \\
+\midrule
+Academic digitization & Demonstrates that marksheet documents can be transformed into reviewable structured academic data \\
+Explainable analytics & Shows a transparent risk model suitable for faculty and student interpretation \\
+Grounded advisory & Combines vector retrieval and generation for student-specific academic guidance \\
+Mentoring workflow support & Extends beyond scoring into teacher visibility and intervention tracking \\
+Thesis-grade system integration & Connects frontend, backend, persistence, and AI services into a coherent educational workflow \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Limitations}
+The present implementation is shaped by available records, selected workflows, and current deployment assumptions. Important limitations include:
+\begin{itemize}[leftmargin=*]
+\item modest scale of live document validation,
+\item limited diversity of marksheet layouts in the current demonstration,
+\item institution-specific thresholds for placement-readiness interpretation,
+\item the absence of a long-duration production deployment across multiple academic cycles,
+\item dependence on external AI services for extraction and advisory quality.
+\end{itemize}
+
+These limitations are consistent with the scope of a major-project thesis and do not diminish the contribution of the work. Instead, they identify the exact areas in which future institutional collaboration can strengthen the system further.
+
+\section{Broader Implications}
+SARS suggests that educational analytics need not be restricted to centralized institutional warehouses or opaque predictive dashboards. A practical academic support platform can begin from the documents students already possess, preserve human verification, and still provide meaningful, explainable, and actionable outputs. This is especially relevant in institutions where full digital integration is still evolving.
+
+\section{Future Scope}
+The project offers several strong directions for extension:
+\begin{itemize}[leftmargin=*]
+\item integration with institutional ERP or examination systems for automated data synchronization,
+\item automated alerting through email, SMS, or in-app notifications for high-risk cases,
+\item richer department-level and branch-level analytics for faculty leadership,
+\item multilingual advisory support for broader accessibility,
+\item stronger OCR generalization across diverse marksheet layouts and scan qualities,
+\item what-if simulation tools for CGPA and backlog recovery planning,
+\item larger-scale validation using longitudinal institutional datasets.
+\end{itemize}
+
+\section{Final Remark}
+The SARS platform establishes a strong foundation for explainable educational analytics and student-specific advisory in a real academic context. Its value lies not only in the use of AI, but in the disciplined way the system combines data extraction, verification, structured persistence, explainable scoring, and grounded guidance. In that sense, the project contributes a meaningful and practical step toward more supportive, transparent, and action-oriented academic decision systems.
+
+\chapterclosing{SARS demonstrates that document-aware digitization, explainable risk interpretation, and grounded advisory can be unified into a usable academic support platform, with clear pathways for institutional-scale extension in future work.}

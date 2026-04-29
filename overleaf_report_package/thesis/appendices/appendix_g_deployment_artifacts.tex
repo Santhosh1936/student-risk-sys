@@ -1,0 +1,80 @@
+\chapter{Deployment and Project Artifacts}
+
+\section{Purpose}
+This appendix summarizes the deployment-facing and documentation-facing artifacts used in the SARS project. The content is written directly in the report so that the thesis compiles reliably on Overleaf without requiring external artifact files.
+
+\section{Representative Backend Dependency Set}
+\begin{lstlisting}[style=sarscode,caption={Representative backend dependency declaration excerpt}]
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pydantic-settings
+python-jose
+passlib
+bcrypt
+python-multipart
+chromadb
+google-generativeai
+\end{lstlisting}
+
+\section{Representative Frontend Package Set}
+\begin{lstlisting}[style=sarscode,caption={Representative frontend package declaration excerpt}]
+{
+  "name": "sars-frontend",
+  "private": true,
+  "dependencies": {
+    "axios": "...",
+    "react": "...",
+    "react-dom": "...",
+    "react-router-dom": "..."
+  }
+}
+\end{lstlisting}
+
+\section{Project Artifact Summary}
+\begin{table}[H]
+\centering
+\caption{Key Project Artifacts Preserved During Development}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Artifact} & \textbf{Purpose} \\
+\midrule
+Goal manifest & Captured implementation scope, milestone readiness, and system completeness notes \\
+Verification notes & Recorded milestone checks, bug fixes, and validation outcomes during development \\
+Project report structure & Guided the chapter-wise layout and screenshot planning of the thesis \\
+Overleaf report package & Preserved a portable version of the thesis source for cloud compilation \\
+Screenshot placement map & Mapped raw UI screenshots to thesis-safe filenames and report sections \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Deployment Notes}
+The implemented system is organized for a practical local deployment model:
+\begin{itemize}[leftmargin=*]
+\item the backend runs as a FastAPI application,
+\item the frontend runs as a React client,
+\item the database uses SQLite for simple project-scale deployment,
+\item the vector store uses persistent local Chroma storage,
+\item AI-backed functions depend on valid external API configuration.
+\end{itemize}
+
+\section{Environment Configuration Summary}
+\begin{table}[H]
+\centering
+\caption{Representative Runtime Configuration Inputs}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.24\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Configuration Item} & \textbf{Role in the System} \\
+\midrule
+\texttt{SECRET\_KEY} & Used for token signing and authentication integrity \\
+\texttt{DATABASE\_URL} & Points the backend to the SQLite database file \\
+\texttt{GEMINI\_API\_KEY} & Enables extraction, embeddings, and advisory generation \\
+\texttt{CHROMA\_DB\_PATH} & Defines persistent vector-store location \\
+\texttt{TEACHER\_INVITE\_CODE} & Protects teacher onboarding from uncontrolled access \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Interpretation}
+These deployment and artifact summaries strengthen the engineering quality of the report. They show that the project was not only implemented functionally, but also packaged, verified, and documented in a way that supports demonstration, review, and future extension.

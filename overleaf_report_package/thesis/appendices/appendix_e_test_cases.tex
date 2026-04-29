@@ -1,0 +1,82 @@
+\chapter{Detailed Test Cases}
+
+\section{Testing Objective}
+The testing objective was to verify that SARS behaves correctly across authentication, marksheet ingestion, academic persistence, risk computation, advisory interaction, and teacher workflows. Because the project integrates multiple subsystems, the test design emphasizes end-to-end correctness and data consistency after each major operation.
+
+\section{Testing Strategy}
+The test strategy combines:
+\begin{itemize}[leftmargin=*]
+\item functional testing for major user workflows,
+\item validation testing for malformed or inconsistent input,
+\item analytical testing for CGPA and risk logic,
+\item workflow testing for teacher-side intervention and analytics behavior.
+\end{itemize}
+
+\section{Detailed Test Cases}
+\begin{longtable}{p{0.10\textwidth}p{0.24\textwidth}p{0.20\textwidth}p{0.28\textwidth}}
+\caption{Detailed Test Cases for SARS}\\
+\toprule
+\textbf{Test ID} & \textbf{Scenario} & \textbf{Expected Result} & \textbf{Status / Notes} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Test ID} & \textbf{Scenario} & \textbf{Expected Result} & \textbf{Status / Notes} \\
+\midrule
+\endhead
+TC1 & Valid student registration & Account created successfully & Supports student onboarding \\
+TC2 & Valid teacher registration with invite code & Teacher account created successfully & Invite protection works \\
+TC3 & Teacher registration without valid invite code & Request rejected & Prevents unauthorized elevation \\
+TC4 & Valid login & Token returned and user routed to correct role & Authentication success path \\
+TC5 & Repeated invalid logins & Rate limit protection activates & Reduces brute-force misuse \\
+TC6 & Upload valid PDF marksheet & Extraction output returned for review & Supports document-first workflow \\
+TC7 & Upload unsupported file format & Request rejected with validation message & Protects extraction pipeline \\
+TC8 & Confirm reviewed marksheet & Semester saved and subject rows persisted & Core persistence workflow \\
+TC9 & Confirm duplicate semester & Request rejected & Duplicate semester prevention works \\
+TC10 & Fetch semester history & Stored records returned in semester order & Records retrieval correct \\
+TC11 & Delete semester record & Semester removed and cumulative state refreshed & Recompute behavior validated \\
+TC12 & Submit valid attendance & Attendance stored and percentages computed & Attendance workflow correct \\
+TC13 & Submit invalid attendance & Request rejected if attended classes exceed total & Validation works \\
+TC14 & Compute risk after semester save & SARS score and level generated & Analytical pipeline active \\
+TC15 & Fetch latest risk output & Latest stored risk state returned & Frontend can render current analysis \\
+TC16 & Low-risk student evaluation & Score remains in low band with positive advisory & Healthy-case behavior visible \\
+TC17 & High-backlog student evaluation & Risk level escalates and advisory becomes urgent & Severe-case behavior visible \\
+TC18 & Advisory chat with valid query & Grounded response generated & Retrieval and generation cooperate \\
+TC19 & Advisory chat with empty query & Request rejected & Prevents invalid conversational input \\
+TC20 & RAG status check after indexing & Chunk count and chunk types available & Retrieval index state visible \\
+TC21 & Teacher risk overview & Students returned in risk-prioritized order & Teacher monitoring path works \\
+TC22 & Teacher opens student profile & Detailed academic, attendance, and intervention data returned & Drill-down page supported \\
+TC23 & Teacher logs intervention & New intervention stored with notes & Follow-up action recorded \\
+TC24 & Teacher resolves intervention & Outcome stored and status changed & Closure workflow works \\
+TC25 & Teacher analytics request & Aggregated class-level metrics returned & Cohort summary path works \\
+\bottomrule
+\end{longtable}
+
+\section{Representative Analytical Validation Cases}
+\begin{table}[H]
+\centering
+\caption{Analytical Validation Focus Areas}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.26\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Analytical Area} & \textbf{Validation Concern} \\
+\midrule
+Credits-weighted CGPA & Ensure semester credit differences affect CGPA correctly \\
+Backlog mapping & Ensure increasing backlog count yields stronger risk effect \\
+Policy floors & Ensure low CGPA or many backlogs prevent underestimation of severe risk \\
+Attendance contribution & Ensure poor attendance increases the final score appropriately \\
+Trend logic & Ensure decline or improvement modifies the GPA-related contribution \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Pass Criteria}
+The system is considered to satisfy the implemented acceptance criteria if:
+\begin{itemize}[leftmargin=*]
+\item each major student workflow completes without data inconsistency,
+\item computed academic values remain stable after create, update, and delete operations,
+\item teacher-side views reflect the same underlying academic state seen by students,
+\item advisory behavior changes meaningfully according to academic profile,
+\item invalid inputs are rejected before corrupting persistence.
+\end{itemize}
+
+\section{Testing Observations}
+The most important testing observation is that integrated workflows matter more than isolated endpoint success. For example, marksheet confirmation is only truly correct if it also leads to correct CGPA recomputation, correct risk refresh, and refreshed advisory context. Similarly, teacher-side usefulness depends on whether the risk and intervention views reflect the same stored academic state seen in the student modules.

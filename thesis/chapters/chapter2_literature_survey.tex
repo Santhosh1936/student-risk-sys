@@ -1,0 +1,64 @@
+\chapter{Literature Survey}
+
+\section{Purpose of the Literature Review}
+The literature review for SARS is not limited to academic performance prediction alone. The proposed system sits at the intersection of educational data mining, explainable analytics, document digitization, and Retrieval-Augmented Generation. The review therefore examines how prior work addresses each of these dimensions and where a practical gap still remains for document-first, explainable academic support systems.
+
+\section{Educational Data Mining and Early Warning Systems}
+Educational Data Mining and Learning Analytics form the conceptual basis for academic risk detection. Prior work has shown that student performance signals can be used to identify learners who may require intervention \cite{baker2014edm}. Institutional early warning systems such as Course Signals and related analytics frameworks demonstrated the value of identifying at-risk students before academic decline becomes irreversible \cite{essa2012predictive,arnold2012course}.
+
+These systems established an important principle: timely interpretation matters more than retrospective reporting. However, many such systems were designed around environments rich in digital traces, such as LMS activity, clickstream behavior, or institutional data warehouses. The present project is motivated by a more constrained but common context in which academic evidence is available mainly through result documents.
+
+\section{Academic Performance Prediction}
+Student performance prediction has evolved from rule-based indicators to machine-learning-driven classification models. Existing approaches have used GPA, course completion behavior, attendance, demographic signals, and engagement patterns to estimate academic difficulty \cite{jayaprakash2014early,romero2020survey}. These studies demonstrate that academic risk is multi-factorial and that backlog-like indicators and trend behavior are often as important as current GPA alone.
+
+Nevertheless, many predictive systems optimize for classification performance without equal attention to how the result will be communicated. In practical academic mentoring, a slightly less sophisticated but clearly interpretable system may be more useful than a complex model that produces a label without explanation.
+
+\section{Explainable AI in Education}
+Explainability is especially important in educational systems because academic decisions have consequences for student confidence, placement opportunities, and remediation planning. Explainable AI research argues that educational systems should make their outputs understandable, auditable, and pedagogically aligned rather than opaque and purely statistical \cite{khosravi2022xai}.
+
+This idea is especially relevant for SARS. A faculty advisor who sees that a student is marked as high risk must also understand whether the cause is low CGPA, multiple backlogs, poor attendance, recent decline, or a combination of these. The value of explainability in this context is therefore not abstract fairness alone; it is direct actionability.
+
+\section{OCR and Document-Based Digitization}
+Many institutional workflows still depend on scanned records, PDF documents, and marksheet images. This makes OCR and document intelligence highly relevant to academic data digitization. However, document extraction alone is not sufficient. It must be followed by validation, structured persistence, and downstream analytics. In educational settings, even small extraction mistakes may propagate into incorrect CGPA or backlog interpretation if not verified.
+
+This limitation suggests an important design insight from the literature: document understanding should be treated as one stage in a larger academic workflow rather than as the final output. SARS adopts this stance by inserting a review step between extraction and persistence.
+
+\section{Large Language Models and Retrieval-Augmented Generation}
+Large language models have expanded the possibilities for educational support, tutoring, and conversational interfaces. At the same time, direct generation without evidence can produce hallucinated or unsupported guidance. Retrieval-Augmented Generation addresses this by conditioning responses on retrieved knowledge and producing more grounded outputs \cite{kasneci2023chatgpt,lewis2020rag,gao2023rag}.
+
+For the present project, the relevance of RAG lies in personalization with traceability. Instead of asking an LLM to give generic advice about improvement, the system can retrieve the student's actual risk summary, semester-wise grades, attendance profile, backlog list, and CGPA trajectory before generating a response.
+
+\section{Teacher-Facing Monitoring in the Literature}
+Much of the published work in academic prediction is student-centric or administrator-centric, but less attention is given to the interface through which mentors or teachers actually consume risk outputs. In practice, faculty action often depends on ranking, case comparison, and ability to record follow-up. This teacher-side decision-support dimension is important because detection without intervention workflow has limited educational impact.
+
+\section{Comparative Synthesis}
+\begin{table}[H]
+\centering
+\caption{High-Level Comparison of Existing Approaches and SARS}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.22\textwidth} >{\raggedright\arraybackslash}p{0.16\textwidth} >{\raggedright\arraybackslash}p{0.16\textwidth} >{\raggedright\arraybackslash}p{0.16\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{System Type} & \textbf{Input Source} & \textbf{Risk Analysis} & \textbf{Explainability} & \textbf{Advisory / Action Support} \\
+\midrule
+Traditional academic portals & Stored records & Limited or absent & Low & None \\
+Generic prediction models & Structured datasets & High & Low to moderate & Rare \\
+OCR digitization tools & Documents & None & Not applicable & None \\
+LLM chat systems & Prompt text & Generic & Variable & High but not grounded \\
+\textbf{SARS} & Documents + structured records & Composite academic risk & High & Personalized, evidence-grounded, and teacher-aware \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Research Gap}
+The gap identified from the literature is not simply the absence of prediction. The more practical gap is the absence of a unified system that:
+\begin{itemize}[leftmargin=*]
+\item accepts grade sheets directly from document form,
+\item computes transparent academic risk rather than opaque scores,
+\item links the analysis to institution-relevant factors such as backlog and attendance,
+\item supports both student and teacher workflows,
+\item grounds advisory responses in retrievable academic evidence.
+\end{itemize}
+
+\section{Implication for the Present Work}
+The literature makes it clear that each component of SARS has precedent in isolation: educational risk analytics, OCR-style extraction, explainability, and retrieval-based language modeling. The novelty and thesis value of the present work lie in integrating these components into one coherent workflow for academic support. SARS does not merely borrow from these areas; it combines them to address a realistic institutional bottleneck.
+
+\chapterclosing{The surveyed literature confirms the importance of student risk detection, explainability, document-aware digitization, and grounded advisory support, while also showing that the integrated workflow implemented by SARS remains insufficiently addressed in existing systems.}

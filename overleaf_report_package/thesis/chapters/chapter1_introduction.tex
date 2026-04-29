@@ -1,0 +1,43 @@
+\chapter{Introduction}
+
+\section{Background}
+Academic performance monitoring in higher education is a recurring challenge because student success depends not only on semester grades but also on cumulative progression, backlog clearance, attendance compliance, and readiness for future academic or placement opportunities. In many institutions, however, grade sheets continue to be handled as static documents rather than as actionable data resources. Early warning systems in education have shown the value of timely intervention, yet most of them assume the presence of rich digital learning traces and continuous online activity data \cite{baker2014edm,essa2012predictive,arnold2012course}.
+
+The practical context of this project is different. In the target environment, official academic results are often received in printed, scanned, or image-based form. This creates a gap between data availability and data usability. Even when student performance data exist, they are not readily transformed into explainable insights for students or faculty members. As a result, at-risk students may remain unidentified until their academic difficulty becomes serious.
+
+\section{Need for the Proposed System}
+Students require timely and understandable feedback on their academic standing, while teachers need a way to monitor a cohort without manually interpreting each grade sheet. Conventional record systems mainly support storage and display; they do not usually explain why a student is at risk, what is contributing to that risk, or what intervention should be recommended next.
+
+The SARS project addresses this need through a unified system that:
+\begin{itemize}[leftmargin=*]
+\item accepts image and PDF grade sheets as input,
+\item extracts structured academic information through a vision-assisted workflow,
+\item computes an explainable composite risk score,
+\item tracks academic progression across semesters,
+\item supports teacher-side monitoring and interventions, and
+\item provides evidence-grounded academic advisory through Retrieval-Augmented Generation.
+\end{itemize}
+
+\section{Aim of the Project}
+The primary aim of this project is to design and implement a thesis-grade academic support platform that converts raw academic records into interpretable risk analysis and personalized advisory guidance for both students and faculty stakeholders.
+
+\section{Objectives}
+The major objectives of the project are listed below:
+\begin{itemize}[leftmargin=*]
+\item to automate grade extraction from marksheet images and PDF documents,
+\item to store semester-wise academic records in a structured relational database,
+\item to compute CGPA and a transparent SARS risk score,
+\item to classify students into meaningful academic risk levels,
+\item to incorporate attendance and backlog information into risk interpretation,
+\item to enable a student-facing dashboard for progress monitoring,
+\item to support a teacher-facing dashboard for cohort supervision, and
+\item to provide personalized advisory responses grounded in retrievable academic evidence.
+\end{itemize}
+
+\section{Scope of the Project}
+The scope of SARS includes academic result ingestion, risk estimation, attendance-aware interpretation, advisory support, and teacher-side monitoring. The system is intended for educational institutions that want an explainable and practical support layer over existing academic records. The current implementation focuses on transcript-style academic inputs, semester progression analysis, and institutional placement-oriented risk interpretation.
+
+\section{Organization of the Report}
+This report is organized into nine chapters. Chapter 1 introduces the problem, motivation, and project scope. Chapter 2 presents the literature survey. Chapter 3 defines the problem statement and proposed solution. Chapter 4 discusses requirements and planning. Chapter 5 explains the system design and architecture. Chapter 6 presents the methodology and algorithms. Chapter 7 describes implementation details. Chapter 8 reports results, testing, and discussion. Chapter 9 concludes the work and outlines future scope.
+
+\chapterclosing{This chapter established the academic motivation for SARS and defined the need for an explainable, document-aware, and advisory-capable student risk assessment system.}

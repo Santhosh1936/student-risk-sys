@@ -1,0 +1,94 @@
+\chapter{API Summary}
+
+\section{Purpose}
+This appendix summarizes the backend API surface implemented in SARS. The API is grouped into authentication, student, and teacher routes. The tables are derived from the actual route definitions in the backend codebase.
+
+\section{Authentication API}
+\begin{longtable}{p{0.22\textwidth}p{0.12\textwidth}p{0.46\textwidth}}
+\caption{Authentication Endpoints}\\
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Purpose} \\
+\midrule
+\endhead
+\texttt{/auth/register} & POST & Create a new student or teacher account and store role-specific fields \\
+\texttt{/auth/login} & POST & Authenticate user credentials and issue a bearer token \\
+\texttt{/auth/me} & GET & Return the authenticated user's identity and role details \\
+\bottomrule
+\end{longtable}
+
+\section{Student API}
+\begin{longtable}{p{0.28\textwidth}p{0.12\textwidth}p{0.40\textwidth}}
+\caption{Student Endpoints}\\
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Purpose} \\
+\midrule
+\endhead
+\texttt{/student/extraction-status} & GET & Return AI extraction configuration status for the logged-in student \\
+\texttt{/student/profile} & GET & Return student profile information including CGPA and semester context \\
+\texttt{/student/profile} & PATCH & Update selected profile fields such as name, roll number, or branch \\
+\texttt{/student/extract-marksheet} & POST & Accept a marksheet file and return extracted data for review \\
+\texttt{/student/confirm-marksheet} & POST & Persist the reviewed semester data and subject list \\
+\texttt{/student/semesters} & GET & Return all stored semester records with subject-level information \\
+\texttt{/student/semesters/\{semester\_no\}} & DELETE & Delete one semester record and refresh cumulative outputs \\
+\texttt{/student/compute-risk} & POST & Trigger on-demand SARS score computation \\
+\texttt{/student/risk-score} & GET & Return the latest stored SARS score and factor breakdown \\
+\texttt{/student/attendance} & POST & Submit attendance for a semester and recompute academic interpretation \\
+\texttt{/student/attendance} & GET & Return all stored attendance grouped by semester \\
+\texttt{/student/attendance/\{semester\_no\}} & DELETE & Remove attendance data for a semester and refresh risk state \\
+\texttt{/student/advisor/chat} & POST & Submit a query to the academic advisory assistant \\
+\texttt{/student/advisor/history} & GET & Return the visible advisory conversation history \\
+\texttt{/student/rag-status} & GET & Return whether the student's academic chunks are indexed in the vector store \\
+\bottomrule
+\end{longtable}
+
+\section{Teacher API}
+\begin{longtable}{p{0.30\textwidth}p{0.12\textwidth}p{0.38\textwidth}}
+\caption{Teacher Endpoints}\\
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Purpose} \\
+\midrule
+\endhead
+\texttt{/teacher/profile} & GET & Return teacher profile information and student-count context \\
+\texttt{/teacher/students} & GET & Return searchable student summaries for faculty view \\
+\texttt{/teacher/risk-overview} & GET & Return students ranked by risk level for monitoring \\
+\texttt{/teacher/students/\{student\_id\}/risk} & GET & Return risk-only details for one student \\
+\texttt{/teacher/students/\{student\_id\}/profile} & GET & Return full academic profile, attendance, risk, and interventions for one student \\
+\texttt{/teacher/interventions} & POST & Create a new intervention record for a student \\
+\texttt{/teacher/interventions/\{intervention\_id\}/resolve} & PATCH & Mark an intervention as resolved and store the outcome \\
+\texttt{/teacher/interventions} & GET & Return intervention history, optionally filtered by status \\
+\texttt{/teacher/analytics} & GET & Return class-level analytics such as risk, CGPA, backlog, and attendance summaries \\
+\bottomrule
+\end{longtable}
+
+\section{Representative Request and Response Behavior}
+\subsection{Student Marksheet Confirmation}
+When the student confirms a reviewed marksheet, the request contains semester summary fields and a list of subject objects. The backend responds with confirmation metadata including the saved semester number and number of stored subjects.
+
+\subsection{Student Attendance Submission}
+Attendance submission expects semester number and a list of subject-level attendance entries. The backend validates that total classes are positive and that attended classes do not exceed total classes before saving.
+
+\subsection{Teacher Intervention Logging}
+Intervention creation requires a student identifier, intervention type, and notes. Resolution later accepts an outcome string and updates the intervention record with closure details.
+
+\section{Security Notes for the API}
+\begin{itemize}[leftmargin=*]
+\item Authentication is token-based, and protected routes depend on role-aware dependencies.
+\item Student routes assume the logged-in user can operate only on their own academic data.
+\item Teacher routes assume teacher-only access and provide faculty-oriented summaries and interventions.
+\item Input validation is performed with Pydantic schemas and explicit business checks in route handlers.
+\end{itemize}
+
+\section{How the API Supports the Thesis Goals}
+The API is not simply a transport layer. Its structure reflects the academic logic of the project. Authentication routes secure the platform, student routes implement the document-to-insight workflow, and teacher routes enable case prioritization and follow-up. Taken together, the API surface is a direct implementation of the requirements established earlier in the report.

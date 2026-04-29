@@ -1,0 +1,190 @@
+\chapter{Implementation and Module Description}
+
+\section{Implementation Overview}
+The SARS system is implemented as a full-stack web application with a React frontend, a FastAPI backend, SQLite with SQLAlchemy for persistence, and AI-assisted services for extraction, embeddings, and advisory generation. The implementation strategy emphasizes modular growth: each academic feature is exposed through a focused backend route set and a corresponding frontend page or workflow.
+
+\section{Technology Stack}
+\begin{table}[H]
+\centering
+\caption{Technology Stack Used in SARS}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.24\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Layer} & \textbf{Technologies and Role} \\
+\midrule
+Frontend & React 18, JavaScript, CSS, Axios, React Router for role-aware navigation \\
+Backend & Python 3.11, FastAPI, Pydantic, dependency injection for route security \\
+Persistence & SQLite and SQLAlchemy ORM for structured academic data storage \\
+Authentication & JWT-based session handling and password hashing \\
+AI extraction & Vision-assisted document extraction for marksheet parsing \\
+Retrieval layer & ChromaDB for student-scoped academic chunk storage and retrieval \\
+Advisory generation & Retrieval-Augmented Generation using retrieved academic evidence \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Codebase Organization}
+The implementation is divided into a project-level thesis workspace and the actual application directory. Within the application, the code is organized into backend services and frontend pages. This structure made it easier to build features progressively and document them separately in the report.
+
+\begin{table}[H]
+\centering
+\caption{High-Level Implementation Structure}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.24\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Path Area} & \textbf{Purpose} \\
+\midrule
+\texttt{sars/backend/app/routes} & Student, teacher, and authentication APIs \\
+\texttt{sars/backend/app/services} & Authentication helpers, risk engine, extraction logic, RAG services, advisory logic \\
+\texttt{sars/backend/app/models} & SQLAlchemy models representing academic and advisory entities \\
+\texttt{sars/frontend/src/pages/student} & Student-facing pages for dashboard, upload, risk, attendance, and advisory \\
+\texttt{sars/frontend/src/pages/teacher} & Teacher-facing pages for students, risk monitor, interventions, and analytics \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Authentication and Entry Flow}
+Authentication is implemented through dedicated registration and login routes. Registration supports both student and teacher roles, while teacher onboarding is gated by an invite-code check. Login issues a JWT token that is used by protected frontend routes and backend dependencies.
+
+\begin{table}[H]
+\centering
+\caption{Authentication Endpoints Implemented in SARS}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Endpoint} & \textbf{Implementation Role} \\
+\midrule
+\texttt{POST /auth/register} & Creates a student or teacher account and stores role-specific fields \\
+\texttt{POST /auth/login} & Validates credentials and returns a bearer token \\
+\texttt{GET /auth/me} & Returns current user identity for authenticated sessions \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The authentication layer also includes password complexity validation, email validation, and brute-force rate limiting for login attempts. These details are important because academic records are sensitive personal data.
+
+\section{Student Dashboard Module}
+\screenfigure{student_dashboard_low.jpeg}{Student dashboard showing CGPA, SARS score, uploaded semesters, and backlog summary.}{fig:student-dashboard-low}
+The student dashboard serves as the entry point after successful authentication. It aggregates the current academic state into a small number of high-value indicators: cumulative performance, risk level, semesters uploaded, and backlog visibility. This implementation choice reduces the need for students to visit multiple pages before understanding their current status.
+
+\section{Marksheet Upload Workflow}
+\screenfigure{upload_marksheet.jpeg}{Upload screen used to submit grade sheet images or PDFs for automated extraction.}{fig:upload-marksheet}
+\screenfigure{pdf_extraction_review.jpeg}{Review screen used to verify extracted subject grades and semester summary before saving.}{fig:ocr-review}
+The marksheet workflow is implemented as a two-stage pipeline:
+\begin{enumerate}[leftmargin=*]
+\item upload a supported file to the extraction endpoint,
+\item review the extracted fields returned by the backend,
+\item confirm the corrected values,
+\item persist the semester record and trigger downstream recomputation.
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Implementation Responsibilities in the Marksheet Workflow}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Implementation Point} & \textbf{Behavior} \\
+\midrule
+\texttt{POST /student/extract-marksheet} & Validates file size and type, calls extraction service, and returns structured output for review \\
+\texttt{POST /student/confirm-marksheet} & Saves the verified semester record and subject list while enforcing duplicate checks and value validation \\
+\texttt{compute\_cgpa()} & Recomputes credits-weighted CGPA after confirmed academic changes \\
+\texttt{compute\_risk\_score()} & Recomputes SARS score after academic persistence \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Academic Records Module}
+\screenfigure{academic_records_low.jpeg}{Academic records page showing semester-wise SGPA progression and stored records.}{fig:academic-records-low}
+The records module exposes semester history after persistence. Each record retains subject-level grades, credits, and backlog status. The implementation also supports deletion of a semester, which triggers recalculation of cumulative metrics and refresh of advisory context.
+
+\section{Attendance and Risk Support}
+Attendance is implemented as a first-class analytical input rather than a decorative extra. The student can submit per-subject attendance for a semester, and the backend computes percentages automatically. Any attendance update causes risk recomputation so that the risk output remains aligned with current evidence.
+
+\begin{table}[H]
+\centering
+\caption{Student-Side Analytical Endpoints}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Endpoint} & \textbf{Purpose in the Implementation} \\
+\midrule
+\texttt{GET /student/semesters} & Returns all stored semester records with subject details \\
+\texttt{POST /student/attendance} & Saves attendance for one semester and triggers risk refresh \\
+\texttt{GET /student/attendance} & Returns stored attendance grouped by semester \\
+\texttt{POST /student/compute-risk} & Computes SARS score on demand \\
+\texttt{GET /student/risk-score} & Returns the latest stored risk output for the logged-in student \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Risk Engine Implementation}
+The risk engine is implemented as a dedicated backend service. It computes:
+\begin{itemize}[leftmargin=*]
+\item credits-weighted CGPA,
+\item total backlog count across confirmed records,
+\item average attendance when available,
+\item trend adjustment based on recent SGPA change,
+\item weighted SARS score and risk level,
+\item advisory summary text and confidence estimate.
+\end{itemize}
+
+The implementation favors a transparent rules-based design. Instead of hiding logic inside a black-box model, the service stores factor breakdown values that the frontend can present directly. This design choice is central to the explainability goal of the project.
+
+\section{Advisory Module Implementation}
+The advisory module combines chat-thread management with RAG-based retrieval. When academic data change, the system marks the student context as stale, refreshes the vector-store index, and uses student-scoped retrieval during future advisory requests. The implementation therefore binds advisory quality to actual data freshness.
+
+\begin{table}[H]
+\centering
+\caption{Advisory and Retrieval Endpoints}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Endpoint} & \textbf{Behavior} \\
+\midrule
+\texttt{POST /student/advisor/chat} & Submits a student message and returns a grounded advisory response \\
+\texttt{GET /student/advisor/history} & Returns the visible advisory conversation history \\
+\texttt{GET /student/rag-status} & Returns whether academic chunks have been indexed for the student \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Teacher-Side Implementation}
+Teacher functionality is implemented as a distinct dashboard with multiple faculty-oriented pages. The teacher shell exposes student search, risk monitoring, analytics, and intervention management through a dedicated route structure.
+
+\screenfigure{teacher_students.jpeg}{Teacher-side student list showing searchable cohort summaries and quick academic status indicators.}{fig:teacher-students}
+\screenfigure{teacher_interventions.jpeg}{Teacher intervention page showing logged academic actions and their current resolution status.}{fig:teacher-interventions}
+
+\begin{table}[H]
+\centering
+\caption{Teacher-Side Route Capabilities}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.29\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Endpoint} & \textbf{Implementation Purpose} \\
+\midrule
+\texttt{GET /teacher/profile} & Returns faculty identity and total-student context \\
+\texttt{GET /teacher/students} & Returns student summaries for searchable cohort listing \\
+\texttt{GET /teacher/risk-overview} & Returns students ranked for teacher-side monitoring \\
+\texttt{GET /teacher/students/\{student\_id\}/profile} & Returns detailed student academic and intervention data \\
+\texttt{POST /teacher/interventions} & Logs a new teacher follow-up action \\
+\texttt{PATCH /teacher/interventions/\{intervention\_id\}/resolve} & Stores intervention outcome and resolution status \\
+\texttt{GET /teacher/interventions} & Returns cross-student intervention history \\
+\texttt{GET /teacher/analytics} & Returns aggregated risk, CGPA, attendance, and backlog analytics \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Database-Backed Model Implementation}
+The ORM model layer reflects the academic lifecycle of the system. User identity is separated from student and teacher profiles. Semester records act as parent entities for subject grades. Risk scores are stored historically so that recomputation events are not overwritten. Advisory sessions, chat threads, and interventions preserve conversational and mentoring continuity.
+
+\section{Validation and Error Handling}
+Implementation quality depends heavily on rejecting invalid inputs before they contaminate the dataset. The code therefore includes:
+\begin{itemize}[leftmargin=*]
+\item upload file-type and size validation,
+\item grade-letter and credit-range validation before save,
+\item attendance consistency checks preventing attended classes from exceeding total classes,
+\item duplicate semester blocking,
+\item rate limiting for chat and login activity.
+\end{itemize}
+
+\section{Implementation Characteristics of the Frontend}
+The frontend emphasizes clarity over visual complexity. Student pages present one academic task per page, while teacher pages provide overview-first monitoring with drill-down access. This is consistent with the project goal: make academic interpretation actionable rather than visually overwhelming.
+
+\section{Integration Behavior Across Modules}
+One of the strongest implementation features of SARS is automatic downstream refresh. When the student confirms a semester upload, the system not only stores the record but also recomputes CGPA, recalculates risk, marks advisory context as updated, and attempts to refresh the student index for retrieval. This event-driven coupling creates a coherent user experience while keeping the modules logically separate in code.
+
+\chapterclosing{This chapter linked the thesis design to the actual implementation by showing how the React frontend, FastAPI routes, risk engine, retrieval layer, and teacher tooling were realized in the project codebase.}

@@ -1,0 +1,227 @@
+\chapter{Database Schema}
+
+\section{Schema Overview}
+The SARS database schema is implemented with SQLAlchemy ORM over SQLite. The schema is designed to preserve both transactional academic records and analytical history. Student and teacher roles are anchored to a shared user table, while academic details are stored in normalized tables for semester records, subject grades, attendance, risk scores, interventions, and advisory activity.
+
+\section{Relationship Summary}
+\begin{table}[H]
+\centering
+\caption{High-Level Relationship Summary of the SARS Schema}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.25\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Relationship} & \textbf{Meaning} \\
+\midrule
+User $\rightarrow$ Student & One user may own one student profile \\
+User $\rightarrow$ Teacher & One user may own one teacher profile \\
+Student $\rightarrow$ SemesterRecord & One student may have many confirmed semester records \\
+SemesterRecord $\rightarrow$ SubjectGrade & One semester record may contain many subject-grade rows \\
+Student $\rightarrow$ AttendanceRecord & One student may have many attendance rows across semesters \\
+Student $\rightarrow$ RiskScore & One student may have a history of recomputed risk results \\
+Teacher $\rightarrow$ Intervention & One teacher may log many interventions \\
+Student $\rightarrow$ AdvisorySession & One student may have many advisory interactions \\
+Student $\rightarrow$ ChatThread $\rightarrow$ ChatMessage & One student may maintain one chat thread with many stored messages \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Table-Wise Description}
+\subsection{User Table}
+\begin{longtable}{p{0.24\textwidth}p{0.16\textwidth}p{0.40\textwidth}}
+\caption{Fields in the User Table}\\
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{id} & Integer & Primary key for user identity \\
+\texttt{email} & String & Unique login email \\
+\texttt{password\_hash} & String & Hashed password value \\
+\texttt{role} & String & Role indicator: student or teacher \\
+\texttt{full\_name} & String & Full name of the user \\
+\texttt{roll\_number} & String & Student roll number when applicable \\
+\texttt{created\_at} & DateTime & Record creation time \\
+\texttt{is\_active} & Boolean & Indicates whether the account is active \\
+\bottomrule
+\end{longtable}
+
+\subsection{Student Table}
+\begin{longtable}{p{0.24\textwidth}p{0.16\textwidth}p{0.40\textwidth}}
+\caption{Fields in the Student Table}\\
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{id} & Integer & Primary key of student profile \\
+\texttt{user\_id} & Integer & Foreign key linking to the user table \\
+\texttt{branch} & String & Academic branch or department of the student \\
+\texttt{enrollment\_year} & Integer & Year of admission \\
+\texttt{current\_semester} & Integer & Latest semester index stored for the student \\
+\texttt{cgpa} & Float & Latest computed cumulative GPA \\
+\bottomrule
+\end{longtable}
+
+\subsection{Teacher Table}
+\begin{longtable}{p{0.24\textwidth}p{0.16\textwidth}p{0.40\textwidth}}
+\caption{Fields in the Teacher Table}\\
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{id} & Integer & Primary key of teacher profile \\
+\texttt{user\_id} & Integer & Foreign key linking to the user table \\
+\texttt{department} & String & Faculty department information \\
+\texttt{employee\_id} & String & Teacher employee identifier \\
+\bottomrule
+\end{longtable}
+
+\subsection{SemesterRecord Table}
+\begin{longtable}{p{0.24\textwidth}p{0.16\textwidth}p{0.40\textwidth}}
+\caption{Fields in the SemesterRecord Table}\\
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{id} & Integer & Primary key of semester record \\
+\texttt{student\_id} & Integer & Student to whom the semester belongs \\
+\texttt{semester\_no} & Integer & Semester number \\
+\texttt{gpa} & Float & SGPA of the semester \\
+\texttt{credits\_attempted} & Float & Total credits registered in the semester \\
+\texttt{credits\_earned} & Float & Credits successfully completed \\
+\texttt{uploaded\_at} & DateTime & Timestamp of upload confirmation \\
+\texttt{is\_confirmed} & Boolean & Indicates that the reviewed data were confirmed \\
+\bottomrule
+\end{longtable}
+
+\subsection{SubjectGrade Table}
+\begin{longtable}{p{0.24\textwidth}p{0.16\textwidth}p{0.40\textwidth}}
+\caption{Fields in the SubjectGrade Table}\\
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{id} & Integer & Primary key of subject-grade row \\
+\texttt{semester\_record\_id} & Integer & Parent semester record \\
+\texttt{subject\_name} & String & Name of the subject \\
+\texttt{subject\_code} & String & Institutional subject code \\
+\texttt{marks\_obtained} & Float & Marks if available from the document \\
+\texttt{max\_marks} & Float & Maximum marks for the subject \\
+\texttt{grade\_letter} & String & Reported letter grade \\
+\texttt{grade\_points} & Float & Numeric grade points used in computation \\
+\texttt{credits} & Float & Subject credits \\
+\texttt{is\_backlog} & Boolean & Indicates whether the subject is a backlog \\
+\bottomrule
+\end{longtable}
+
+\subsection{AttendanceRecord Table}
+\begin{longtable}{p{0.24\textwidth}p{0.16\textwidth}p{0.40\textwidth}}
+\caption{Fields in the AttendanceRecord Table}\\
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{id} & Integer & Primary key of attendance row \\
+\texttt{student\_id} & Integer & Student to whom attendance belongs \\
+\texttt{semester\_no} & Integer & Semester identifier \\
+\texttt{subject\_name} & String & Name of the subject \\
+\texttt{classes\_attended} & Integer & Number of attended classes \\
+\texttt{total\_classes} & Integer & Total conducted classes \\
+\texttt{percentage} & Float & Computed attendance percentage \\
+\bottomrule
+\end{longtable}
+
+\subsection{RiskScore Table}
+\begin{longtable}{p{0.24\textwidth}p{0.16\textwidth}p{0.40\textwidth}}
+\caption{Fields in the RiskScore Table}\\
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{id} & Integer & Primary key of stored risk result \\
+\texttt{student\_id} & Integer & Student whose risk was computed \\
+\texttt{computed\_at} & DateTime & Timestamp of computation \\
+\texttt{sars\_score} & Float & Final SARS score from 0 to 100 \\
+\texttt{risk\_level} & String & Final qualitative level such as LOW or HIGH \\
+\texttt{confidence} & Float & Evidential confidence estimate \\
+\texttt{factor\_breakdown} & JSON / Text & Stored breakdown of score components and context values \\
+\texttt{advisory\_text} & Text & Stored summary advisory text generated by the risk engine \\
+\bottomrule
+\end{longtable}
+
+\subsection{Intervention Table}
+\begin{longtable}{p{0.24\textwidth}p{0.16\textwidth}p{0.40\textwidth}}
+\caption{Fields in the Intervention Table}\\
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{id} & Integer & Primary key of intervention record \\
+\texttt{student\_id} & Integer & Student for whom the intervention is logged \\
+\texttt{teacher\_id} & Integer & Teacher who created the intervention \\
+\texttt{intervention\_type} & String & Type of follow-up such as counseling or tutoring \\
+\texttt{notes} & Text & Free-text intervention notes \\
+\texttt{created\_at} & DateTime & Intervention creation timestamp \\
+\texttt{resolved\_at} & DateTime & Resolution timestamp when available \\
+\texttt{outcome} & String & Final outcome or closure note \\
+\bottomrule
+\end{longtable}
+
+\subsection{AdvisorySession, ChatThread, and ChatMessage Tables}
+\begin{longtable}{p{0.24\textwidth}p{0.16\textwidth}p{0.40\textwidth}}
+\caption{Conversation and Advisory Support Tables}\\
+\toprule
+\textbf{Field Group} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Field Group} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+AdvisorySession & Mixed & Stores one advisory interaction including query, intent, response, and timestamp \\
+ChatThread & Mixed & Stores one persistent thread per student for multi-turn continuity \\
+ChatMessage & Mixed & Stores individual user or model messages linked to a thread \\
+\bottomrule
+\end{longtable}
+
+\section{Schema Design Rationale}
+The schema was designed to support both transaction and analysis:
+\begin{itemize}[leftmargin=*]
+\item Semester records and subject grades preserve the academic source truth.
+\item Risk scores preserve recomputation history instead of overwriting prior results.
+\item Attendance exists independently so it can be updated after semester upload.
+\item Interventions are separated from risk scores because action history should remain distinct from analytical history.
+\item Advisory and chat entities preserve continuity for grounded conversational support.
+\end{itemize}
+
+\section{Implication for Future Extension}
+The existing schema can be extended toward broader institutional integration by adding administrator tables, placement records, timetable data, or notifications. The current normalized structure provides a stable foundation for such future work because the core academic entities are already separated and well linked.

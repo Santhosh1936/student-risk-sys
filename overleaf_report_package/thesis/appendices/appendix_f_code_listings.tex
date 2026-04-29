@@ -1,0 +1,107 @@
+\chapter{Core Code Listings}
+
+\section{Purpose}
+This appendix preserves representative implementation excerpts from the SARS project in a LaTeX-safe form. The goal is to document the most important engineering ideas without depending on external source-file imports during compilation.
+
+\section{Database Initialization Excerpt}
+\begin{lstlisting}[style=sarscode,caption={Representative backend database setup excerpt}]
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+engine = create_engine(settings.DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+\end{lstlisting}
+
+\section{Representative ORM Model Excerpt}
+\begin{lstlisting}[style=sarscode,caption={Representative academic ORM model excerpt}]
+class SemesterRecord(Base):
+    __tablename__ = "semester_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    semester_no = Column(Integer, nullable=False)
+    gpa = Column(Float, nullable=True)
+    credits_attempted = Column(Float, nullable=True)
+    credits_earned = Column(Float, nullable=True)
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_confirmed = Column(Boolean, default=False)
+
+class SubjectGrade(Base):
+    __tablename__ = "subject_grades"
+
+    id = Column(Integer, primary_key=True, index=True)
+    semester_record_id = Column(Integer, ForeignKey("semester_records.id"), nullable=False)
+    subject_name = Column(String, nullable=False)
+    subject_code = Column(String, nullable=True)
+    grade_letter = Column(String, nullable=True)
+    grade_points = Column(Float, nullable=True)
+    credits = Column(Float, nullable=True)
+    is_backlog = Column(Boolean, default=False)
+\end{lstlisting}
+
+\section{Risk Engine Excerpt}
+\begin{lstlisting}[style=sarscode,caption={Representative SARS risk computation excerpt}]
+def compute_cgpa(student_id: int, db: Session):
+    records = db.query(SemesterRecord).filter(
+        SemesterRecord.student_id == student_id
+    ).all()
+
+    total_weighted_points = 0.0
+    total_credits = 0.0
+
+    for rec in records:
+        if rec.gpa is None or rec.credits_attempted in (None, 0):
+            continue
+        total_weighted_points += float(rec.gpa) * float(rec.credits_attempted)
+        total_credits += float(rec.credits_attempted)
+
+    if total_credits == 0:
+        return None
+
+    return round(total_weighted_points / total_credits, 2)
+
+def final_sars_score(gpa_risk, backlog_risk, attendance_risk):
+    return round(
+        gpa_risk * 0.40 +
+        backlog_risk * 0.35 +
+        attendance_risk * 0.25,
+        2
+    )
+\end{lstlisting}
+
+\section{RAG Chunk Construction Excerpt}
+\begin{lstlisting}[style=sarscode,caption={Representative student-specific RAG chunk construction excerpt}]
+def build_risk_summary_chunk(student, risk, breakdown):
+    lines = [
+        "Risk summary:",
+        f"- SARS score: {risk.sars_score}",
+        f"- Risk level: {risk.risk_level}",
+        f"- Confidence: {risk.confidence}",
+    ]
+
+    for key in sorted(breakdown.keys()):
+        lines.append(f"- {key}: {breakdown[key]}")
+
+    return {
+        "chunk_type": "risk_summary",
+        "student_id": str(student.id),
+        "text": "\\n".join(lines),
+    }
+\end{lstlisting}
+
+\section{Interpretation}
+These excerpts are sufficient to document the key engineering contribution of the system:
+\begin{itemize}[leftmargin=*]
+\item the relational backend is session-based and modular,
+\item academic records are normalized into semester and subject entities,
+\item risk logic is transparent and formula-driven,
+\item retrieval content is built from student-specific academic evidence.
+\end{itemize}

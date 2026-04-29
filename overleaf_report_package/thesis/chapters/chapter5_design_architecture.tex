@@ -1,0 +1,171 @@
+\chapter{System Design and Architecture}
+
+\section{Design Objectives}
+The architecture of SARS was shaped by five design objectives: separation of concerns, explainability, verifiable data capture, role-aware access control, and extensibility toward future institutional integration. These objectives required a structure in which presentation logic, application services, persistence, and AI capabilities remain loosely coupled while still participating in one end-to-end academic workflow.
+
+\section{Layered Architecture Overview}
+SARS follows a layered architecture that separates presentation, backend services, data persistence, and AI-assisted intelligence components. This separation improves maintainability and allows each subsystem to evolve independently while still supporting coordinated academic workflows.
+
+\screenfigure{system_architecture_diagram.pdf}{High-level SARS architecture showing presentation, application, data, and AI service layers.}{fig:system-architecture}
+
+\section{Presentation Layer}
+The presentation layer is implemented as a React single-page application with role-sensitive navigation. Students interact with dashboard summaries, marksheet upload, academic record review, risk visualization, attendance, and advisory features. Teachers use a separate navigation structure that exposes cohort monitoring, student drill-down, interventions, and analytics.
+
+From a design perspective, the presentation layer performs four important functions:
+\begin{itemize}[leftmargin=*]
+\item route the user to the correct role-specific module,
+\item capture academic inputs in a form suitable for backend validation,
+\item translate backend analytical outputs into interpretable visual elements, and
+\item preserve a smooth workflow from upload to insight rather than isolating each feature.
+\end{itemize}
+
+\section{Application Layer}
+The application layer is built with FastAPI and coordinates authentication, record validation, semester persistence, risk recomputation, advisory orchestration, and teacher analytics. The backend acts as the enforcement point for business rules because academic correctness cannot be entrusted only to frontend behavior.
+
+\begin{table}[H]
+\centering
+\caption{Major Backend Route Groups and Responsibilities}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.22\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Route Group} & \textbf{Design Responsibility} \\
+\midrule
+Authentication routes & Register users, validate credentials, issue access tokens, and expose current-user identity \\
+Student routes & Manage upload, extraction confirmation, semester retrieval, attendance, risk access, and advisory chat \\
+Teacher routes & Expose profile, risk overview, detailed student profile, intervention management, and analytics \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Persistence Layer}
+The data layer stores users, student profiles, teachers, semester records, subject grades, attendance records, risk scores, advisory sessions, chat threads, chat messages, and interventions. The relational design was selected because academic information is highly structured and benefits from referential integrity.
+
+\begin{table}[H]
+\centering
+\caption{Core Persistent Entities in SARS}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.22\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Entity} & \textbf{Purpose in the Architecture} \\
+\midrule
+User & Stores authentication identity and role information \\
+Student / Teacher & Store role-specific academic or faculty profile attributes \\
+SemesterRecord & Represents a confirmed semester submission with SGPA and credit summary \\
+SubjectGrade & Stores subject-level performance values and backlog flags \\
+AttendanceRecord & Stores subject-level attendance per semester \\
+RiskScore & Preserves recomputed SARS score history and factor breakdowns \\
+Intervention & Stores teacher follow-up actions and outcomes \\
+AdvisorySession / ChatThread / ChatMessage & Preserve advisory prompts, responses, and thread continuity \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{AI Services Layer}
+The AI services layer contains the document extraction workflow, embeddings pipeline, vector storage, and advisory generation pipeline. This layer converts raw academic inputs into structured signals and later into evidence-grounded responses. Importantly, the AI layer is not allowed to bypass system validation. Extraction is followed by review before saving, and advisory is grounded in retrieved academic chunks rather than unsupported generation.
+
+\section{Frontend Module Architecture}
+The frontend architecture can be understood as two role-centered application shells built on shared infrastructure.
+
+\begin{table}[H]
+\centering
+\caption{Frontend Module Decomposition}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.26\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Frontend Module} & \textbf{Primary Responsibility} \\
+\midrule
+Authentication context and protected routes & Preserve login state and restrict route access by role \\
+Student dashboard pages & Show overview, records, upload workflow, risk analysis, attendance, and advisory \\
+Teacher dashboard pages & Show My Students, risk monitor, interventions, analytics, and detailed student views \\
+Shared API service & Centralize HTTP communication with backend endpoints \\
+Dashboard layout & Provide consistent role-specific navigation and page framing \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Backend Service Decomposition}
+The backend is further decomposed into focused services that limit cross-module coupling.
+
+\begin{table}[H]
+\centering
+\caption{Service-Level Decomposition of SARS}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.24\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Service} & \textbf{Responsibility} \\
+\midrule
+\texttt{auth\_service.py} & Password hashing, user creation, credential validation, JWT token generation \\
+\texttt{grade\_extractor.py} & Vision-assisted extraction and normalization of document-derived academic fields \\
+\texttt{risk\_engine.py} & Credits-weighted CGPA, backlog counting, attendance aggregation, trend logic, and SARS score computation \\
+\texttt{rag\_service.py} & Chunk generation, embedding, indexing, retrieval, and vector-store management \\
+\texttt{advisor.py} & Advisory conversation orchestration and chat-thread lifecycle management \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Data Flow Through the System}
+The most important design decision in SARS is that the system behaves as a sequence of validated transformations rather than a direct pipeline from raw upload to final output. The academic record must pass through multiple checkpoints.
+
+\begin{table}[H]
+\centering
+\caption{End-to-End Data Flow Across the Architecture}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.14\textwidth} >{\raggedright\arraybackslash}p{0.23\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Stage} & \textbf{Owning Layer} & \textbf{Design Action} \\
+\midrule
+1 & Presentation & Student uploads marksheet document through the web interface \\
+2 & Application + AI & Backend validates file and invokes extraction service \\
+3 & Presentation & Extracted output is shown to the student for review and correction \\
+4 & Persistence & Confirmed semester and subject data are stored relationally \\
+5 & Analytics service & CGPA and SARS score are recomputed and recorded \\
+6 & Retrieval layer & Student knowledge chunks are refreshed in the vector store \\
+7 & Presentation & Updated dashboard, records, risk view, and advisory context become available \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Request-Response Design for Key Workflows}
+\subsection{Marksheet Upload and Confirmation}
+The upload workflow was split into two explicit backend operations: extraction and confirmation. This is an important design choice because it separates uncertain machine interpretation from authoritative storage. The system first returns a candidate structured output; only after the user confirms the extracted values does the system create the semester record.
+
+\subsection{Risk Recompute Workflow}
+Risk recomputation is event-driven. When semester data or attendance data change, the risk engine recalculates cumulative academic interpretation and persists a new risk record. This design preserves a historical trail and ensures that the UI reflects the latest academic state without requiring separate manual refresh logic.
+
+\subsection{Advisory Workflow}
+The advisory workflow first retrieves student-scoped knowledge chunks from the vector store and only then invokes response generation. By placing retrieval ahead of generation, the design increases groundedness and keeps the response focused on academic evidence relevant to the current student.
+
+\section{Security and Access-Control Design}
+The architecture treats security as a structural requirement rather than an afterthought. Several design decisions support this:
+\begin{itemize}[leftmargin=*]
+\item JWT-based authentication is used to protect application routes.
+\item Role-aware dependencies ensure that student endpoints and teacher endpoints are separated.
+\item Teacher onboarding uses an invite-code gate to reduce unauthorized role escalation.
+\item File size and file type validation reduce upload abuse and unsupported document handling.
+\item Input validation protects persistence logic from malformed academic values.
+\end{itemize}
+
+\section{Explainability by Design}
+Explainability in SARS is achieved through architectural decisions, not merely through a descriptive paragraph in the UI. The system stores factor breakdown data, trend direction, total backlogs, and advisory summaries alongside the final score. This means the explanation layer is generated from persistent analytical components rather than from post-hoc narrative alone.
+
+\section{Scalability and Extensibility Considerations}
+Although SARS is currently implemented for a limited deployment context, the architecture is designed with several extension points:
+\begin{itemize}[leftmargin=*]
+\item the relational schema can support additional student metadata or semester features,
+\item the risk engine can be recalibrated for different institutional policies,
+\item the retrieval layer can incorporate more chunk types or richer academic contexts,
+\item the teacher analytics layer can be expanded toward branch-level or department-level reporting,
+\item the persistence layer can later be migrated from SQLite to a larger database if needed.
+\end{itemize}
+
+\section{Architectural Trade-Offs}
+The final design reflects several conscious trade-offs:
+\begin{itemize}[leftmargin=*]
+\item SQLite was chosen for development simplicity over distributed scalability.
+\item Human verification was preferred over direct OCR persistence to improve trust.
+\item Rule-grounded explainability was prioritized over complex black-box prediction models.
+\item A lightweight direct RAG integration was preferred over a larger orchestration framework to keep the codebase manageable.
+\end{itemize}
+
+\section{Failure-Handling Design}
+The architecture also anticipates operational failure modes. Invalid uploads are rejected early. Duplicate semesters are blocked. Risk recompute and re-index operations are designed as best-effort follow-up tasks after core academic persistence so that one secondary failure does not corrupt or roll back the entire primary workflow. This improves robustness for real users.
+
+\section{Design Summary}
+Taken as a whole, the design of SARS connects user experience and system correctness. The architecture supports a document-to-insight workflow while preserving the checkpoints needed for educational trust: review before save, explainability after scoring, and evidence grounding before advisory.
+
+\chapterclosing{This chapter explained how SARS is structured across presentation, application, persistence, and AI layers, and showed how the architecture was intentionally designed to support verifiable academic interpretation rather than opaque automation.}

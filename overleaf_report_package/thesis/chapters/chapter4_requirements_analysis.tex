@@ -1,0 +1,219 @@
+\chapter{Requirements Analysis and Project Planning}
+
+\section{Purpose of the Requirements Study}
+The requirements analysis phase was used to convert the broad project vision into a bounded, implementable specification. Because SARS spans document extraction, academic analytics, advisory interaction, and teacher monitoring, the system requirements had to cover both computational behavior and institutional usability. The resulting specification therefore emphasizes traceability from stakeholder need to module design.
+
+\section{Stakeholder Analysis}
+Three primary stakeholder groups shape the requirements of the system.
+
+\begin{table}[H]
+\centering
+\caption{Primary Stakeholders and Their Expectations}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.18\textwidth} >{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Stakeholder} & \textbf{Primary Need} & \textbf{Implication for SARS} \\
+\midrule
+Student & Understand academic standing clearly and quickly & The system must expose CGPA, backlog, risk, attendance, and advisory in a readable form \\
+Teacher / Mentor & Identify priority cases and record action & The system must provide cohort visibility, student drill-down, and intervention support \\
+Institution / Department & Encourage consistency and timely support & The system must preserve structured records, clear rules, and audit-friendly outputs \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Feasibility Study}
+\subsection{Technical Feasibility}
+The project is technically feasible because the selected stack combines modern web development, relational persistence, and accessible AI services. FastAPI supports modular backend development, React provides a responsive single-page interface, and SQLite plus SQLAlchemy are sufficient for the current deployment scope. ChromaDB provides a lightweight persistent vector store suitable for local retrieval without introducing an external service dependency.
+
+The system is also technically feasible because the most critical computations are straightforward and interpretable. Weighted CGPA, backlog counting, attendance aggregation, and rule-based policy floors do not require opaque model training pipelines. This reduces implementation complexity while improving trust.
+
+\subsection{Operational Feasibility}
+The proposed workflow aligns with real institutional practice because it accepts document-based academic input rather than assuming clean database exports. Human verification after OCR extraction improves operational trust and reduces the risk of storing incorrect academic records. The teacher workflow is also operationally feasible because it builds on common mentoring tasks: reviewing student progress, checking risk, and logging follow-up actions.
+
+\subsection{Economic Feasibility}
+The system uses a compact full-stack architecture and can be deployed with moderate infrastructure requirements. For pilot or departmental use, this makes it economically practical compared with enterprise-scale academic analytics platforms. The main variable cost is AI API usage for extraction, embeddings, and response generation; however, the retrieval-based design reduces the amount of prompt context required for advisory interactions.
+
+\subsection{Schedule Feasibility}
+The project can be delivered incrementally. Core academic record management can be completed first, followed by risk computation, then advisory, and finally teacher analytics. This phased structure is valuable because each stage yields a demonstrable outcome even before the full system is complete.
+
+\section{Hardware and Software Requirements}
+\begin{table}[H]
+\centering
+\caption{Software and Hardware Requirements}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Requirement Type} & \textbf{Details} \\
+\midrule
+Operating system & Windows 10/11 or an equivalent development environment \\
+Backend runtime & Python 3.11, FastAPI, SQLAlchemy, SQLite \\
+Frontend runtime & Node.js, React 18, JavaScript, Axios, CSS \\
+AI services & Vision-assisted extraction, embedding model, and generative response model \\
+Vector store & ChromaDB persistent local storage \\
+Minimum hardware & 8 GB RAM, dual-core processor, adequate free disk space for database and vector store \\
+Connectivity & Stable internet connection for AI API access during extraction and advisory tasks \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{User Roles and Role Responsibilities}
+\begin{itemize}[leftmargin=*]
+\item \textbf{Student}: registers, uploads marksheets, verifies extracted data, reviews semester records, submits attendance, views risk analysis, and interacts with the advisory assistant.
+\item \textbf{Teacher}: views assigned or available students, monitors risk ranking, inspects detailed student profiles, and records or resolves interventions.
+\item \textbf{Administrator or controlled authority}: manages elevated access or invite-based teacher registration and can supervise policy configuration outside the current user interface.
+\end{itemize}
+
+\section{Functional Requirements}
+The functional requirements were organized around the real workflows visible in the implementation.
+
+\begin{longtable}{p{0.12\textwidth}p{0.19\textwidth}p{0.53\textwidth}}
+\caption{Detailed Functional Requirements of SARS}\\
+\toprule
+\textbf{Req. ID} & \textbf{Module} & \textbf{Requirement Description} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Req. ID} & \textbf{Module} & \textbf{Requirement Description} \\
+\midrule
+\endhead
+FR1 & Authentication & The system shall support student and teacher registration with role-based account creation. \\
+FR2 & Authentication & The system shall enforce secure login and issue access tokens for authenticated sessions. \\
+FR3 & Authentication & The system shall restrict teacher registration through an invite-code mechanism. \\
+FR4 & Student profile & The student shall be able to view and update profile information relevant to academic context. \\
+FR5 & Marksheet upload & The student shall be able to upload marksheets in PDF, JPG, JPEG, or PNG format. \\
+FR6 & Extraction & The system shall extract semester, subject, grade, and credit information from uploaded marksheets. \\
+FR7 & Verification & The extracted data shall be presented to the student for confirmation before persistence. \\
+FR8 & Semester records & The system shall store semester-wise academic records and prevent duplicate uploads for the same semester. \\
+FR9 & CGPA computation & The system shall compute credits-weighted CGPA automatically whenever semester data change. \\
+FR10 & Risk engine & The system shall compute SARS score using GPA, backlog, attendance, and trend logic. \\
+FR11 & Risk presentation & The system shall classify students into low, watch, moderate, or high risk categories. \\
+FR12 & Attendance & The student shall be able to submit attendance per subject and semester. \\
+FR13 & Advisory & The system shall support advisory chat grounded in retrieved student-specific academic evidence. \\
+FR14 & Cohort visibility & The teacher shall be able to see a student list and risk-ordered overview of the cohort. \\
+FR15 & Student drill-down & The teacher shall be able to inspect one student's detailed academic and risk profile. \\
+FR16 & Interventions & The teacher shall be able to log and resolve interventions with notes and outcomes. \\
+FR17 & Analytics & The teacher shall be able to view class-level analytics such as risk distribution and backlog patterns. \\
+FR18 & Audit trail & The system shall preserve risk history, advisory sessions, and intervention records for review. \\
+\bottomrule
+\end{longtable}
+
+\section{Non-Functional Requirements}
+Because SARS operates in an educational context, non-functional requirements are as important as functional ones.
+
+\begin{table}[H]
+\centering
+\caption{Non-Functional Requirements and Their Interpretation}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.17\textwidth} >{\raggedright\arraybackslash}p{0.18\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Category} & \textbf{Target Quality} & \textbf{Interpretation in SARS} \\
+\midrule
+Security & Role protection & JWT-based authentication and role-specific route guards must protect academic data \\
+Usability & Low-friction workflow & Students should be able to move from upload to review to save without technical complexity \\
+Explainability & Transparent outputs & Risk views must show factor-wise reasoning rather than only a final label \\
+Reliability & Safe persistence & Invalid uploads or malformed values should be rejected before storage \\
+Maintainability & Modular structure & Frontend pages, backend routes, and services should remain separable and readable \\
+Scalability & Bounded pilot growth & The architecture should support moderate growth in students, semesters, and advisory chunks \\
+Auditability & Traceable actions & Stored semester records, risk history, and interventions should allow retrospective review \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Use-Case View}
+\begin{table}[H]
+\centering
+\caption{Representative Use Cases Derived from the System Requirements}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.17\textwidth} >{\raggedright\arraybackslash}p{0.20\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Actor} & \textbf{Use Case} & \textbf{Expected Outcome} \\
+\midrule
+Student & Register and log in & Student receives access to academic dashboard and record tools \\
+Student & Upload marksheet & Extracted academic information becomes available for verification \\
+Student & Confirm extracted data & Semester record is saved and downstream metrics are refreshed \\
+Student & Submit attendance & Attendance-aware risk recomputation occurs \\
+Student & Ask advisory question & A grounded response is generated from retrieved academic evidence \\
+Teacher & View cohort list & Teacher sees searchable summaries of student status \\
+Teacher & Open risk monitor & Teacher views students ordered by risk urgency \\
+Teacher & Inspect student profile & Teacher sees semester history, attendance, risk, and interventions \\
+Teacher & Log intervention & A follow-up record is stored with type and notes \\
+Teacher & View analytics & Teacher observes class-level trends and concentration of risk \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Requirement Traceability}
+Traceability was maintained by mapping each major requirement to the implementation area responsible for it.
+
+\begin{table}[H]
+\centering
+\caption{Requirement-to-Module Traceability Matrix}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.14\textwidth} >{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Requirement Group} & \textbf{Primary Module} & \textbf{Supporting Components} \\
+\midrule
+Authentication & \texttt{auth.py} routes and \texttt{auth\_service.py} & JWT dependency layer, frontend login and protected routes \\
+Marksheet workflow & \texttt{student.py} upload and confirm routes & \texttt{grade\_extractor.py}, student upload UI, database models \\
+Risk computation & \texttt{risk\_engine.py} & semester records, subject grades, attendance records, student and teacher dashboards \\
+Advisory & \texttt{advisor.py} and \texttt{rag\_service.py} & chat thread models, student advisory page, embeddings, vector store \\
+Teacher monitoring & \texttt{teacher.py} routes & teacher dashboard pages, intervention models, analytics aggregation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Input Validation and Business Rules}
+Requirements analysis also identified the need for concrete validation rules because academic data are high-impact. The following business rules are reflected in the implementation:
+\begin{itemize}[leftmargin=*]
+\item marksheet uploads are restricted to supported file types and size limits,
+\item duplicate semester uploads are blocked until the previous record is removed,
+\item invalid grade letters, out-of-range credits, and inconsistent attendance inputs are rejected,
+\item chat requests are rate limited to reduce misuse,
+\item teacher registration requires invite-based authorization.
+\end{itemize}
+
+\section{Project Planning and Phase Breakdown}
+The implementation roadmap followed a progressive build sequence that allowed earlier modules to stabilize before more advanced ones were added.
+
+\begin{table}[H]
+\centering
+\caption{Major Development Phases of the Project}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.13\textwidth} >{\raggedright\arraybackslash}p{0.22\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Phase} & \textbf{Focus} & \textbf{Representative Deliverables} \\
+\midrule
+Phase 1 & Foundation & Project structure, database setup, user authentication, protected routing \\
+Phase 2 & Academic ingestion & Marksheet upload, extraction, review screen, semester persistence \\
+Phase 3 & Explainable analytics & CGPA logic, backlog mapping, attendance handling, SARS risk engine \\
+Phase 4 & Advisory support & RAG chunking, indexing, retrieval, student advisory chat workflow \\
+Phase 5 & Faculty tooling & My Students view, risk monitor, analytics, intervention workflows \\
+Phase 6 & Evaluation and reporting & Test evidence, screenshots, thesis chapters, and final documentation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Project Risk Register}
+\begin{table}[H]
+\centering
+\caption{Project-Level Risks Identified During Planning}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.26\textwidth} >{\raggedright\arraybackslash}p{0.12\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Risk} & \textbf{Severity} & \textbf{Mitigation Strategy} \\
+\midrule
+Poor quality or low-resolution marksheets & High & Introduce preprocessing, user verification, and format restrictions \\
+Incorrect cumulative academic calculation & High & Use credits-weighted CGPA and validate against known records \\
+Opaque risk communication & High & Expose factor-wise explanation and preserve rule transparency \\
+Hallucinated advisory responses & High & Use retrieval grounding with student-scoped metadata filtering \\
+Unauthorized access to teacher features & Medium & Enforce role checks and invite-based teacher onboarding \\
+Sparse student records causing weak interpretation & Medium & Report confidence and encourage multi-semester uploads \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Acceptance Criteria}
+The requirements were considered satisfied if the system could demonstrate the following acceptance criteria:
+\begin{itemize}[leftmargin=*]
+\item a student can register, log in, upload a marksheet, and save a reviewed semester record,
+\item the saved record updates the dashboard, records view, and risk output coherently,
+\item attendance submission changes the attendance-aware interpretation,
+\item advisory responses reflect student-specific academic state,
+\item a teacher can view students, inspect details, and log interventions,
+\item analytics summarize class-level status from the persisted dataset.
+\end{itemize}
+
+\chapterclosing{This chapter translated stakeholder needs into implementable requirements, established the feasibility and planning basis of the project, and created a traceable bridge between academic goals and the implemented SARS modules.}

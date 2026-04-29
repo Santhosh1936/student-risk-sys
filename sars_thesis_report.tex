@@ -1,0 +1,205 @@
+\documentclass[12pt,a4paper,oneside]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{listings}
+
+\graphicspath{{thesis/assets/}}
+\onehalfspacing
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{2}
+\hypersetup{
+    hidelinks,
+    pdfauthor={Kethavath Santhosh, Jumpula Vignesh, S P S Sai Suraj},
+    pdftitle={SARS: An Explainable Agentic RAG-Based Student Academic Performance Risk Assessment and Advisory System Project Report}
+}
+
+\newcommand{\thesistitle}{SARS: AN EXPLAINABLE AGENTIC RAG-BASED STUDENT ACADEMIC PERFORMANCE RISK ASSESSMENT AND ADVISORY SYSTEM}
+\newcommand{\institutionname}{Sreenidhi Institute of Science and Technology}
+\newcommand{\institutionsubtitle}{(An Autonomous Institution)}
+\newcommand{\institutionaddress}{Yamnampet, Ghatkesar, R.R. District, Hyderabad -- 501301}
+\newcommand{\departmentname}{Department of Information Technology}
+\newcommand{\universityname}{Jawaharlal Nehru Technological University}
+\newcommand{\guidefaculty}{Dr. Sunil Bhutada}
+\newcommand{\guideposition}{Professor \& Head}
+\newcommand{\projectcoordinator}{Dr. Y. Rohita}
+\newcommand{\externalexaminer}{Dr. P.N. Sivajyothi}
+\newcommand{\certificateyear}{2026}
+\newcommand{\studentonename}{Kethavath Santhosh}
+\newcommand{\studentoneroll}{22311A12P9}
+\newcommand{\studenttwoname}{Jumpula Vignesh}
+\newcommand{\studenttworoll}{22311A12P6}
+\newcommand{\studentthreename}{S P S Sai Suraj}
+\newcommand{\studentthreeroll}{22311A12N5}
+\newcommand{\studentone}{\studentonename \hspace{1em} \studentoneroll}
+\newcommand{\studenttwo}{\studenttwoname \hspace{1em} \studenttworoll}
+\newcommand{\studentthree}{\studentthreename \hspace{1em} \studentthreeroll}
+\newcommand{\studentonecert}{\studentonename~(\studentoneroll)}
+\newcommand{\studenttwocert}{\studenttwoname~(\studenttworoll)}
+\newcommand{\studentthreecert}{\studentthreename~(\studentthreeroll)}
+\newcommand{\submissionyear}{2022--2026}
+
+\newcommand{\screenfigure}[3]{
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{#1}
+\caption{#2}
+\label{#3}
+\end{figure}
+}
+
+\newcommand{\plannedfigure}[2]{
+\begin{figure}[H]
+\centering
+\fbox{
+\parbox[c][2.6in][c]{0.84\textwidth}{
+\centering
+\textbf{Planned Screenshot Slot}\\[0.6em]
+#1
+}
+}
+\caption{#2}
+\end{figure}
+}
+
+\newcommand{\chapterclosing}[1]{
+\section*{Chapter Summary}
+#1
+}
+
+\makeatletter
+\def\@makechapterhead#1{%
+  \vspace*{50\p@}%
+  {\parindent \z@ \centering \normalfont
+    \ifnum \c@secnumdepth >\m@ne
+      \huge\bfseries \@chapapp\space \thechapter
+      \par\nobreak
+      \vskip 20\p@
+    \fi
+    \Huge \bfseries #1\par\nobreak
+    \vskip 40\p@
+  }}
+
+\def\@makeschapterhead#1{%
+  \vspace*{50\p@}%
+  {\parindent \z@ \centering \normalfont
+    \Huge \bfseries #1\par\nobreak
+    \vskip 40\p@
+  }}
+\makeatother
+
+\lstdefinestyle{sarscode}{
+    basicstyle=\ttfamily\scriptsize,
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    tabsize=4,
+    showstringspaces=false
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\nouppercase{\leftmark}}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\setlength{\headheight}{15pt}
+
+\begin{document}
+
+\pagenumbering{gobble}
+\input{thesis/frontmatter/title_page}
+\clearpage
+
+\pagenumbering{roman}
+\setcounter{page}{1}
+\input{thesis/frontmatter/certificate}
+\input{thesis/frontmatter/declaration}
+\input{thesis/frontmatter/acknowledgement}
+\input{thesis/frontmatter/abstract}
+
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+\clearpage
+\input{thesis/frontmatter/abbreviations}
+
+\clearpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\input{thesis/chapters/chapter1_introduction}
+\input{thesis/chapters/chapter2_literature_survey}
+\input{thesis/chapters/chapter3_problem_statement}
+\input{thesis/chapters/chapter4_requirements_analysis}
+\input{thesis/chapters/chapter5_design_architecture}
+\input{thesis/chapters/chapter6_methodology_algorithms}
+\input{thesis/chapters/chapter7_implementation}
+\input{thesis/chapters/chapter8_results_discussion}
+\input{thesis/chapters/chapter9_conclusion_future_scope}
+
+\begin{thebibliography}{99}
+\bibitem{baker2014edm}
+R. S. J. D. Baker and G. Siemens, ``Educational data mining and learning analytics,'' in \emph{Learning Analytics}, 2014.
+
+\bibitem{essa2012predictive}
+A. Essa and H. Ayad, ``Student success system: Risk analytics and data visualization using ensemble models,'' in \emph{Proceedings of the 2nd International Conference on Learning Analytics and Knowledge}, 2012.
+
+\bibitem{arnold2012course}
+K. E. Arnold and M. D. Pistilli, ``Course signals at Purdue: Using learning analytics to increase student success,'' in \emph{Proceedings of the 2nd International Conference on Learning Analytics and Knowledge}, 2012.
+
+\bibitem{jayaprakash2014early}
+S. M. Jayaprakash, E. W. Moody, E. J. Lauria, J. R. Regan, and J. D. Baron, ``Early alert of academically at-risk students: An open source analytics initiative,'' \emph{Journal of Learning Analytics}, vol. 1, no. 1, pp. 6--47, 2014.
+
+\bibitem{romero2020survey}
+C. Romero and S. Ventura, ``Educational data mining and learning analytics: An updated survey,'' \emph{WIREs Data Mining and Knowledge Discovery}, vol. 10, no. 3, 2020.
+
+\bibitem{khosravi2022xai}
+H. Khosravi, S. Shum, and R. Chen, ``Explainable artificial intelligence in education,'' \emph{Computers and Education: Artificial Intelligence}, vol. 3, 2022.
+
+\bibitem{kasneci2023chatgpt}
+E. Kasneci et al., ``ChatGPT for good? On opportunities and challenges of large language models for education,'' \emph{Learning and Individual Differences}, vol. 103, 2023.
+
+\bibitem{lewis2020rag}
+P. Lewis et al., ``Retrieval-augmented generation for knowledge-intensive NLP tasks,'' in \emph{Advances in Neural Information Processing Systems}, 2020.
+
+\bibitem{gao2023rag}
+Y. Gao et al., ``Retrieval-augmented generation for large language models: A survey,'' 2023, arXiv:2312.10997.
+\end{thebibliography}
+
+\appendix
+\input{thesis/appendices/appendix_a_user_manual}
+\input{thesis/appendices/appendix_b_api_summary}
+\input{thesis/appendices/appendix_c_database_schema}
+\input{thesis/appendices/appendix_d_sample_outputs}
+\input{thesis/appendices/appendix_e_test_cases}
+\input{thesis/appendices/appendix_f_code_listings}
+\input{thesis/appendices/appendix_g_deployment_artifacts}
+\input{thesis/appendices/appendix_h_project_classification}
+
+\end{document}

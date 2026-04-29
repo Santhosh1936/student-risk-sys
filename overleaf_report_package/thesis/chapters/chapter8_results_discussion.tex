@@ -1,0 +1,201 @@
+\chapter{Results, Testing, and Discussion}
+
+\section{Evaluation Strategy}
+The evaluation of SARS focuses on whether the platform can accurately ingest academic data, persist it meaningfully, compute transparent risk outputs, and generate student-specific advisory responses grounded in the available record. Because the project is implementation-driven, the results chapter emphasizes workflow validity, interpretability, and module integration rather than only reporting a single predictive metric.
+
+\section{Evaluation Dimensions}
+The system was assessed along five dimensions:
+\begin{itemize}[leftmargin=*]
+\item correctness of document extraction and review workflow,
+\item correctness of credits-weighted cumulative academic computation,
+\item clarity of low-risk versus high-risk differentiation,
+\item usefulness of teacher-side cohort monitoring outputs,
+\item groundedness of advisory retrieval and response generation.
+\end{itemize}
+
+\section{Dataset and Demonstration Context}
+The implemented system was exercised on real marksheet-style academic records and a representative demonstration cohort covering multiple risk levels. The purpose of this mixed evaluation setup was to verify extraction and persistence on authentic document structures while also showing how the scoring engine behaves across contrasting student profiles.
+
+\begin{table}[H]
+\centering
+\caption{Evaluation Context Used for SARS Demonstration}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Evaluation Area} & \textbf{Context} \\
+\midrule
+Extraction validation & Real grade sheets spanning multiple semesters and subject rows \\
+CGPA validation & Comparison of weighted computation against official academic values \\
+Risk evaluation & Demonstration cohort covering low, watch, moderate, and high-risk cases \\
+Interface evaluation & Student-side and teacher-side screens captured from working application flows \\
+Advisory evaluation & Retrieval behavior checked against representative academic question types \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Grade Extraction Accuracy}
+The extraction workflow was evaluated on real grade sheet documents covering multiple semester uploads and subject entries. The practical result is that the final extraction configuration was able to recover the academic details needed for semester persistence and downstream risk computation reliably enough to support the review-and-save workflow.
+
+\begin{table}[H]
+\centering
+\caption{Grade Extraction Accuracy on Real Grade Sheets}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Student} & \textbf{Semesters} & \textbf{Subjects} & \textbf{Extracted} & \textbf{Accuracy} \\
+\midrule
+Student A & 5 & 47 & 47 & 100\% \\
+Student B & 2 & 19 & 19 & 100\% \\
+Total & 7 & 66 & 66 & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Although the observed extraction accuracy is strong in this demonstration setting, the architecture still preserves human verification because institutional marksheets vary in quality, cropping, and layout. The review screen remains an important safeguard rather than a fallback for failure alone.
+
+\section{CGPA Validation}
+The weighted CGPA formula was checked against official academic records. This validation is important because incorrect averaging would weaken trust in every downstream module that depends on cumulative academic interpretation.
+
+\begin{table}[H]
+\centering
+\caption{CGPA Formula Validation}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Student} & \textbf{Weighted CGPA} & \textbf{Simple Average} & \textbf{Official} \\
+\midrule
+Student A & 8.55 & 8.57 & 8.55 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The comparison shows why weighted CGPA must be used in the system. A simple semester average can appear numerically close but is academically incorrect whenever semester credit loads differ.
+
+\section{Demonstration Cohort Distribution}
+To demonstrate the behavior of the risk engine across different academic conditions, the project uses a representative cohort covering low, watch, moderate, and high risk categories. This makes it easier to explain the effect of CGPA, backlogs, and policy floor rules on the final classification.
+
+\begin{table}[H]
+\centering
+\caption{SARS Score Distribution Across the Demonstration Cohort}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Student Name} & \textbf{CGPA} & \textbf{Backlogs} & \textbf{SARS Score} & \textbf{Level} \\
+\midrule
+Ravi Kumar Sharma & 9.10 & 0 & 6.3 & Low \\
+Priya Lakshmi Reddy & 8.60 & 0 & 8.1 & Low \\
+Arjun Venkata Naidu & 7.90 & 0 & 28.4 & Watch \\
+Sneha Anjali Patel & 7.30 & 0 & 29.2 & Watch \\
+Mohammed Farhan & 6.50 & 2 & 58.3 & Moderate \\
+Lakshmi Sravani Devi & 5.80 & 1 & 62.1 & Moderate \\
+Venkat Suresh Boyapati & 4.90 & 4 & 82.5 & High \\
+Divya Sree Krishna & 4.20 & 6 & 87.3 & High \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Scenario-Level Interpretation of the Risk Engine}
+\begin{table}[H]
+\centering
+\caption{How Different Academic Conditions Affect the Final Risk Interpretation}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.22\textwidth} >{\raggedright\arraybackslash}p{0.20\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Scenario} & \textbf{Observed Level} & \textbf{Interpretation} \\
+\midrule
+Strong CGPA, no backlogs, stable attendance & Low & The system treats such students as on track and uses advisory mainly for planning and consistency \\
+Borderline CGPA, no backlogs & Watch & The system signals caution before the student falls into a more serious category \\
+Moderate CGPA with one or two backlogs & Moderate & Backlogs trigger a meaningful increase and push the student toward intervention-oriented messaging \\
+Very low CGPA or three or more backlogs & High & Policy floor rules prevent optimistic averaging from understating serious academic difficulty \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{High-Risk Case Visualization}
+\screenfigure{student_dashboard_high.jpeg}{Dashboard of a high-risk student showing lower CGPA, higher risk, and active backlogs.}{fig:student-dashboard-high}
+\screenfigure{academic_records_high.jpeg}{Academic record view of a high-risk student showing weaker semester progression.}{fig:academic-records-high}
+These figures demonstrate that the system can make adverse academic conditions immediately visible. The presence of multiple backlogs, weaker semester scores, and elevated risk status are expressed clearly in the interface rather than being hidden across separate records.
+
+\section{Explainable Risk Output}
+\screenfigure{risk_analysis_low.jpeg}{Low-risk SARS analysis showing factor-wise explanation, SGPA trend, and supportive advisory.}{fig:risk-analysis-low}
+\screenfigure{risk_analysis_high.jpeg}{High-risk SARS analysis showing strong backlog contribution and urgent advisory emphasis.}{fig:risk-analysis-high}
+The risk analysis view is one of the strongest outputs of the system because it does not merely present a single number. Instead, it decomposes the score into contributing academic factors and provides context for why the student belongs to a given risk category. This is especially important in educational settings, where the explanation often matters as much as the label.
+
+\section{Advisory Output Evaluation}
+\screenfigure{advisory_low.jpeg}{Advisory response for a low-risk student focusing on placement readiness and continued consistency.}{fig:advisory-low}
+\screenfigure{advisory_high.jpeg}{Advisory response for a high-risk student prioritizing backlog clearance and academic recovery.}{fig:advisory-high}
+The advisory results indicate that the response behavior changes according to the student's actual profile. Low-risk students receive reinforcement and planning guidance, while high-risk students receive more urgent academic recovery recommendations. This variation is important because generic advice would have limited academic value.
+
+\section{Teacher-Side Result Interpretation}
+\screenfigure{teacher_risk_monitor.jpeg}{Teacher risk-monitor view ranking students by academic urgency for follow-up.}{fig:teacher-risk-monitor}
+\screenfigure{teacher_analytics.jpeg}{Teacher analytics summary showing class-level distribution of risk, backlog concentration, and attendance status.}{fig:teacher-analytics}
+The teacher-side results show that SARS is not only a student self-service platform. It also acts as a faculty decision-support system. The risk-monitor page helps identify which students need attention first, while the analytics screen summarizes where academic difficulty is concentrated across the cohort.
+
+\section{Retrieval Evaluation and Token Efficiency}
+The advisory layer was also assessed from an information-retrieval perspective by checking whether the correct chunk category was retrieved for representative academic question types.
+
+\begin{table}[H]
+\centering
+\caption{RAG Retrieval Evaluation}
+\begin{tabular}{llll}
+\toprule
+\textbf{Question Type} & \textbf{Expected} & \textbf{Retrieved} & \textbf{Correct} \\
+\midrule
+Risk level query & risk\_summary & risk\_summary & Yes \\
+Specific grade query & semester\_N & semester\_N & Yes \\
+Placement eligibility & placement\_eligibility & placement & Yes \\
+What-if CGPA query & cgpa\_trajectory & cgpa\_traj & Yes \\
+Backlog strategy & backlogs & backlogs & Yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Token Efficiency Comparison}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Approach} & \textbf{Tokens per Request} & \textbf{Estimated Daily Capacity} \\
+\midrule
+Context stuffing & $\sim$3000 & $\sim$333 requests \\
+RAG retrieval & $\sim$800 & $\sim$1250 requests \\
+Reduction & 73\% & 3.75$\times$ improvement \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Representative Functional Test Coverage}
+\begin{table}[H]
+\centering
+\caption{Representative Functional and Analytical Test Cases}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.12\textwidth} >{\raggedright\arraybackslash}p{0.33\textwidth} >{\raggedright\arraybackslash}p{0.17\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Test ID} & \textbf{Scenario} & \textbf{Expected Result} & \textbf{Observation} \\
+\midrule
+TC1 & Upload valid PDF marksheet & Fields extracted and shown for review & Achieved through review interface \\
+TC2 & Save verified semester data & Semester stored and dashboard refreshed & Academic history updated correctly \\
+TC3 & Evaluate low-risk student & Score remains in low band & Dashboard and risk screen consistent \\
+TC4 & Evaluate backlog-heavy student & Risk emphasis increases and advisory tone changes & High-risk behavior clearly reflected \\
+TC5 & Ask advisory about placement & Response refers to academic context & Grounded personalized answer observed \\
+TC6 & Open teacher risk overview & Students appear ordered for monitoring & High-risk cases surface first \\
+TC7 & Log intervention & Teacher follow-up is stored with status & Intervention history updates correctly \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Observed Strengths}
+The results suggest that the greatest strength of SARS is not any single module in isolation, but the integration of extraction, explainable scoring, and evidence-grounded advisory into a coherent academic workflow. The evaluation also shows that credits-weighted CGPA is essential for correctness, that non-linear backlog treatment gives more realistic risk interpretation, and that retrieval-based advisory improves efficiency while preserving groundedness.
+
+\section{Limitations of the Present Evaluation}
+At the same time, the results should be interpreted with the appropriate academic caution. The present evaluation is limited by:
+\begin{itemize}[leftmargin=*]
+\item a modest number of real marksheet validation examples,
+\item demonstration-focused cohort evaluation rather than a large institutional trial,
+\item dependence on input document quality,
+\item institution-specific policy assumptions such as placement thresholds,
+\item the current absence of longitudinal field deployment across many semesters of live use.
+\end{itemize}
+
+These limitations do not weaken the thesis; instead, they make the report more credible and academically mature. They show that the project succeeds as a practical prototype and thesis-grade system while leaving room for future validation at greater scale.
+
+\section{Discussion}
+The results indicate that explainability is a decisive requirement in educational analytics. A raw score alone would not provide the same practical value as a factor-wise explanation tied to CGPA, backlog count, attendance, and trend. The project also shows that RAG is particularly useful in academic advisory because the student's own record provides the most relevant knowledge base. Rather than constructing a broad generic tutoring agent, SARS narrows the problem to evidence-grounded academic decision support.
+
+Another important discussion point is the role of human oversight. The system is intentionally designed so that extraction is reviewable, risk logic is inspectable, and teacher interventions remain part of the workflow. This combination makes the platform more suitable for real educational environments than a fully opaque, autonomous predictor.
+
+\chapterclosing{This chapter demonstrated that SARS can move from document ingestion to meaningful academic interpretation, differentiate contrasting student conditions clearly, support faculty monitoring, and produce grounded advisory behavior while still acknowledging the current scope and evaluation limits of the project.}

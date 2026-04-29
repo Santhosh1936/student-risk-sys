@@ -1,0 +1,121 @@
+\chapter{User Manual}
+
+\section{Purpose of This Appendix}
+This appendix serves as an operational guide for using the SARS platform. It is intended for students, teachers, evaluators, and project reviewers who need to understand how the implemented system is used in practice. The manual follows the same workflow order that the application exposes through its interface.
+
+\section{Pre-Requisites for Use}
+Before using the system, the user should ensure the following:
+\begin{itemize}[leftmargin=*]
+\item a valid account has been created for the appropriate role,
+\item the backend and frontend services are running,
+\item the student has a readable marksheet image or PDF for upload,
+\item internet access is available when AI-backed extraction or advisory services are used.
+\end{itemize}
+
+\section{Student Workflow}
+\subsection{Step 1: Register or Log In}
+The student begins by registering a new account or logging in with valid credentials. During registration, the student enters role, email, password, name, and optional academic profile fields such as branch and enrollment year.
+
+\subsection{Step 2: Open the Dashboard}
+\screenfigure{student_dashboard_low.jpeg}{Student dashboard used as the landing page after successful login.}{fig:appendix-student-dashboard}
+After login, the student dashboard presents the current CGPA, SARS score, semester count, and backlog summary. This view provides a quick academic snapshot and acts as the starting point for all other actions.
+
+\subsection{Step 3: Upload a Marksheet}
+The student opens the upload page and submits a supported marksheet file. The accepted formats are PDF, JPG, JPEG, and PNG. The upload process is intended for semester result documents that contain subject and SGPA information.
+
+\subsection{Step 4: Review Extracted Output}
+After extraction, the system presents the detected semester data for human verification. The student should carefully review:
+\begin{itemize}[leftmargin=*]
+\item semester number,
+\item SGPA and CGPA values if extracted,
+\item subject names and codes,
+\item credits and grade points,
+\item backlog indicators.
+\end{itemize}
+
+\subsection{Step 5: Confirm and Save}
+Once verified, the student confirms the extracted data. The system then stores the semester record, recomputes CGPA, recalculates SARS score, and refreshes advisory context.
+
+\subsection{Step 6: View Academic Records}
+The academic records page shows the stored semester history. Students can review semester summaries, subject-level grades, and progression over time. If an incorrect semester was saved, the system supports record deletion followed by recomputation.
+
+\subsection{Step 7: Submit Attendance}
+The attendance page allows subject-wise attendance data entry for a semester. For each subject, the student enters attended classes and total classes. The percentage is computed automatically by the system.
+
+\subsection{Step 8: View Risk Analysis}
+The risk page exposes the factor-wise interpretation of the SARS score. Students can see how CGPA, backlog count, attendance, and trend contribute to the final result. This page should be used to understand \emph{why} the student is in a particular category.
+
+\subsection{Step 9: Use the Advisory Assistant}
+The advisory page allows the student to ask questions such as placement readiness, backlog clearance strategy, semester-specific queries, or general improvement planning. The response is generated from retrieved academic evidence rather than generic prior knowledge alone.
+
+\section{Teacher Workflow}
+\subsection{Step 1: Log In With Teacher Credentials}
+Teachers log in using an account created with the protected teacher role. The role-based route guard then exposes faculty pages instead of student pages.
+
+\subsection{Step 2: Open the Student List}
+\screenfigure{teacher_students.jpeg}{Teacher-side student list used to browse and search the cohort.}{fig:appendix-teacher-students}
+The My Students page shows searchable cohort summaries. Faculty members can search by student name, roll number, or branch, then open an individual student profile.
+
+\subsection{Step 3: Open Risk Monitor}
+The risk monitor page ranks students according to academic urgency. This helps the teacher decide which cases need follow-up first.
+
+\subsection{Step 4: Inspect Detailed Student Profile}
+From the student list or risk monitor, the teacher can open an individual profile. The detailed profile includes semester history, attendance information, risk breakdown, and intervention history.
+
+\subsection{Step 5: Record an Intervention}
+When academic follow-up occurs, the teacher can log an intervention and specify:
+\begin{itemize}[leftmargin=*]
+\item intervention type,
+\item free-text notes,
+\item later outcome when the intervention is resolved.
+\end{itemize}
+
+\subsection{Step 6: View Analytics}
+The analytics page summarizes the class-level academic picture, including risk distribution, backlog concentration, average SGPA trend, and attendance summary. This view supports faculty planning at the cohort level rather than only the individual-student level.
+
+\section{Recommended Usage Sequence}
+\begin{table}[H]
+\centering
+\caption{Recommended Operational Sequence for SARS Users}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.18\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{User Role} & \textbf{Recommended Sequence} \\
+\midrule
+Student & Log in $\rightarrow$ upload marksheet $\rightarrow$ review and save $\rightarrow$ view records $\rightarrow$ submit attendance $\rightarrow$ inspect risk $\rightarrow$ ask advisory questions \\
+Teacher & Log in $\rightarrow$ open My Students or Risk Monitor $\rightarrow$ inspect student profile $\rightarrow$ log intervention if required $\rightarrow$ review analytics \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Common Validation Rules Visible to Users}
+\begin{itemize}[leftmargin=*]
+\item Passwords must satisfy minimum complexity during registration.
+\item Unsupported upload formats are rejected.
+\item Oversized files are not accepted.
+\item Duplicate semester uploads are blocked until the old record is deleted.
+\item Attendance cannot exceed total conducted classes.
+\item Empty advisory messages are rejected.
+\end{itemize}
+
+\section{Troubleshooting Guide}
+\begin{longtable}{p{0.24\textwidth}p{0.26\textwidth}p{0.34\textwidth}}
+\caption{Common User Issues and Suggested Resolution}\\
+\toprule
+\textbf{Observed Issue} & \textbf{Likely Cause} & \textbf{Suggested Action} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Observed Issue} & \textbf{Likely Cause} & \textbf{Suggested Action} \\
+\midrule
+\endhead
+Login fails repeatedly & Incorrect password or rate limiting & Recheck credentials and wait before retrying if rate limit is triggered \\
+Upload rejected & Unsupported file type or size limit exceeded & Use PDF, JPG, JPEG, or PNG and ensure the file is within allowed size \\
+Extracted fields look incorrect & Poor image quality or unusual document layout & Review carefully, correct the values manually, then confirm only after verification \\
+Risk not computed yet & No confirmed semester data stored & Save a semester record first or trigger risk computation after upload \\
+Advisory feels incomplete & Sparse student record or missing attendance & Upload more semester data and attendance for stronger context \\
+Teacher cannot create account & Invite code missing or invalid & Use the correct teacher invite workflow during registration \\
+\bottomrule
+\end{longtable}
+
+\section{Operational Notes for Demonstration}
+During project demonstrations, the most effective sequence is to first show the student upload-and-review workflow, then show the change in stored academic record and risk output, and finally switch to the teacher dashboard to demonstrate cohort visibility and intervention logging. This sequence best communicates the end-to-end nature of the system.

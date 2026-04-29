@@ -1,0 +1,190 @@
+\chapter{Problem Statement and Objectives}
+
+\section{Institutional Context}
+Student performance monitoring in engineering education is not a one-time review activity. It is a recurring academic governance task that influences remediation planning, placement readiness, scholarship retention, and mentoring workload. In many institutions, however, the available academic evidence is fragmented. The official result sheet may exist only as a PDF export, a scanned copy, or a mobile-phone photograph. Semester performance may therefore be visible to the student and faculty member, but it is not immediately available as structured data that can support analysis.
+
+This context creates a practical disconnect. The institution already possesses the academic signal, yet the signal is trapped inside document layouts that require repeated human interpretation. The burden falls on individual students to understand their standing and on teachers to manually review each record. In departments with many students, this quickly becomes time-consuming and inconsistent.
+
+\section{Formal Problem Statement}
+The core problem addressed in this project is the absence of an integrated academic support platform that can convert document-based semester records into explainable, actionable, and continuously updatable student risk intelligence. Existing academic workflows frequently stop at storage or display. They do not combine:
+\begin{itemize}[leftmargin=*]
+\item document ingestion from marksheet images and PDFs,
+\item verification-oriented digitization of extracted academic data,
+\item credits-weighted cumulative interpretation,
+\item explainable risk scoring linked to actual academic factors,
+\item student-facing advisory interaction grounded in evidence, and
+\item teacher-side monitoring with intervention support.
+\end{itemize}
+
+As a result, students may not recognize emerging risk early enough, and faculty members may not have a consistent mechanism for comparing cases, prioritizing intervention, or documenting follow-up actions.
+
+\section{Motivating Scenario}
+Consider a student who has uploaded only a few result sheets over time and is beginning to accumulate academic backlogs. The student's semester GPA may fluctuate, cumulative performance may remain below placement expectations, and attendance may also be weak in one or more subjects. In the conventional workflow, the student sees these facts separately and must infer their meaning. A faculty advisor must manually compute whether the trajectory is improving or declining and whether the student is approaching a high-risk condition.
+
+SARS is motivated by the need to turn this scattered evidence into a coherent academic narrative. The system should answer questions such as:
+\begin{itemize}[leftmargin=*]
+\item Is the student currently on track for placement eligibility?
+\item Which factor is driving the present risk level most strongly?
+\item Is the latest semester an improvement or a decline over the prior semester?
+\item Which students should a teacher prioritize for intervention this week?
+\item Can the student receive guidance that is grounded in the actual record rather than generic motivational text?
+\end{itemize}
+
+\section{Existing Workflow and Its Limitations}
+In the existing workflow, academic data move through an interpretation chain that is mostly manual. Students obtain marksheets, faculty members inspect them, and any risk judgment is made informally. This process creates multiple weaknesses.
+
+\begin{table}[H]
+\centering
+\caption{Weaknesses in the Conventional Academic Monitoring Workflow}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.20\textwidth} >{\raggedright\arraybackslash}p{0.30\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Stage} & \textbf{Current Practice} & \textbf{Observed Limitation} \\
+\midrule
+Result acquisition & Students receive PDF or image-based marksheets & Data remain document-centric and are not directly analytics-ready \\
+Faculty review & Advisor reads one record at a time & Review quality depends on time, memory, and workload \\
+Cumulative interpretation & CGPA and backlog understanding may be informal & Weighted computation and trend reasoning may be overlooked \\
+Risk communication & Student receives ad hoc comments & The explanation is not standardized or persistently available \\
+Follow-up tracking & Advice may occur offline or verbally & There is limited auditability of what intervention was given and when \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The drawbacks of the existing approach can be summarized as follows:
+\begin{itemize}[leftmargin=*]
+\item academic records remain document-centric rather than analytics-ready,
+\item interpretation is delayed and inconsistent across students,
+\item students do not receive transparent explanations for their academic status,
+\item teacher-side cohort visibility is weak,
+\item follow-up actions are rarely documented within the same system, and
+\item personalized advisory interaction is absent or not grounded in record-specific evidence.
+\end{itemize}
+
+\section{Research Questions}
+The project is organized around a set of practical research questions rather than a purely predictive benchmark problem.
+
+\begin{enumerate}[leftmargin=*]
+\item Can marksheet documents be transformed into verified structured academic records with sufficient fidelity for downstream analytics?
+\item Can a composite academic risk score be designed so that it remains interpretable to both students and faculty members?
+\item Can the system integrate CGPA, backlog status, attendance, and semester trend into one risk interpretation without hiding the contribution of each factor?
+\item Can Retrieval-Augmented Generation provide student-specific academic advisory that remains grounded in the student's own record?
+\item Can the same platform support both self-service student reflection and teacher-side intervention planning?
+\end{enumerate}
+
+\section{Proposed System}
+The proposed system, SARS, is an Explainable Agentic RAG-Based Student Academic Performance Risk Assessment and Advisory System. It is designed as a full workflow rather than as an isolated model. The system accepts marksheet files, extracts and normalizes academic content, allows user verification before persistence, computes an explainable SARS risk score, and creates a retrieval-ready knowledge layer for grounded advisory.
+
+The proposed workflow therefore joins three academic needs:
+\begin{itemize}[leftmargin=*]
+\item \textbf{digitization}: transform academic documents into structured data,
+\item \textbf{interpretation}: compute transparent academic risk and progression signals, and
+\item \textbf{action}: provide advisory and intervention pathways for students and teachers.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Existing Approach Versus Proposed SARS System}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.24\textwidth} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Criterion} & \textbf{Existing Approach} & \textbf{Proposed SARS System} \\
+\midrule
+Input handling & Manual reading of result documents & Automated extraction from PDF or image grade sheets with review before save \\
+Data persistence & Fragmented or semester-specific & Structured semester-wise storage with subject-level detail \\
+Risk analysis & Informal and advisor-dependent & Formal composite score with factor breakdown and level mapping \\
+Explainability & Mostly verbal and inconsistent & Built-in explanation of GPA, backlogs, attendance, and trend \\
+Student support & Reactive, often delayed & On-demand dashboard, risk view, and grounded advisory \\
+Teacher visibility & Separate spreadsheets or manual checking & Risk monitor, searchable student list, analytics, and interventions \\
+Auditability & Limited & Stored records, recomputed scores, advisory sessions, and intervention history \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Objectives of the Study}
+\subsection{Primary Objective}
+The primary objective is to design and implement a practical academic support platform that can identify and explain performance risk using document-derived semester records and evidence-grounded advisory.
+
+\subsection{Functional Objectives}
+\begin{itemize}[leftmargin=*]
+\item upload and process marksheet files in image or PDF format,
+\item extract subject grades, credits, SGPA, and semester metadata,
+\item present extracted data for verification before persistence,
+\item store academic history across semesters in a relational schema,
+\item compute weighted CGPA and SARS risk score automatically,
+\item classify students into meaningful academic risk levels,
+\item support attendance-aware risk interpretation,
+\item provide student-facing visualization and advisory interaction, and
+\item support teacher-side cohort monitoring and interventions.
+\end{itemize}
+
+\subsection{Non-Functional Objectives}
+\begin{itemize}[leftmargin=*]
+\item preserve explainability in every important analytical output,
+\item enforce secure role-based access to academic information,
+\item maintain modularity across frontend, backend, risk, and retrieval layers,
+\item support data integrity through verification and validation,
+\item keep the system practical for pilot-scale institutional use.
+\end{itemize}
+
+\section{Hypothesis and Expected Value}
+The underlying hypothesis of the project is that academic risk interpretation becomes more useful when it is both \emph{document-aware} and \emph{explainable}. A platform that can move from marksheet image to verified data, from verified data to factor-wise risk, and from factor-wise risk to grounded advisory should be more actionable than either a static portal or a generic conversational assistant.
+
+The expected institutional value of the system lies in earlier detection, better communication of academic weakness, and more consistent mentoring decisions. The expected student value lies in clarity, self-monitoring, and targeted recovery guidance.
+
+\section{Scope Boundaries}
+The scope of the present work is intentionally focused. SARS is not positioned as a university-wide ERP replacement and is not intended to automate high-stakes academic decisions without human oversight. Its current scope includes:
+\begin{itemize}[leftmargin=*]
+\item semester marksheet ingestion,
+\item academic record persistence,
+\item risk computation using available transcript and attendance information,
+\item student-specific advisory generation grounded in retrieved evidence,
+\item teacher-side monitoring and intervention logging.
+\end{itemize}
+
+The current implementation does not attempt full institutional integration with examination branches, timetable systems, or enterprise student information systems. It is best understood as an explainable decision-support layer that can later integrate with such systems.
+
+\section{Assumptions and Constraints}
+\begin{table}[H]
+\centering
+\caption{Key Assumptions and Constraints Governing the Project}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.23\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Aspect} & \textbf{Assumption / Constraint} \\
+\midrule
+Input format & Students provide readable PDF or image marksheets containing semester data \\
+Verification model & Extracted values are confirmed by the user before persistence to reduce OCR error impact \\
+Risk context & Academic risk is interpreted mainly through CGPA, backlog, attendance, and recent trend \\
+Institutional policy & Placement-readiness threshold and backlog policy are modeled according to the target institutional context \\
+Deployment scale & The present system targets pilot or departmental operation rather than full enterprise-scale usage \\
+Teacher onboarding & Teacher registration is protected through invite-based access control \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Success Criteria for the Project}
+The project is considered successful if the implemented system can:
+\begin{itemize}[leftmargin=*]
+\item reliably support the review-and-save workflow for extracted semester records,
+\item persist and retrieve semester data accurately,
+\item compute a risk score that aligns with academic intuition and policy floors,
+\item differentiate low-risk and high-risk student cases visibly in the interface,
+\item produce advisory responses that refer to relevant academic evidence, and
+\item support teacher-side visibility and intervention logging from the same data foundation.
+\end{itemize}
+
+\section{Contribution Map}
+\begin{table}[H]
+\centering
+\caption{Contribution Map of the SARS Project}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Contribution Area} & \textbf{Project Contribution} \\
+\midrule
+Academic digitization & Converts marksheet images and PDFs into verified structured records \\
+Explainable analytics & Uses a transparent composite risk score with factor breakdown and policy floors \\
+Student support & Provides dashboard, records, risk analysis, attendance, and advisory interfaces \\
+Teacher decision support & Provides searchable student views, risk monitoring, analytics, and interventions \\
+Grounded generative support & Uses retrieval over student-specific academic chunks before response generation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapterclosing{This chapter defined the real institutional problem solved by SARS, formulated the research questions and objectives, and positioned the proposed system as an explainable academic decision-support workflow rather than a simple prediction model.}

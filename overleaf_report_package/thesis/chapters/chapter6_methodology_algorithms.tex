@@ -1,0 +1,141 @@
+\chapter{Methodology and Core Algorithms}
+
+\section{End-to-End Workflow}
+The SARS workflow begins when a student uploads a grade sheet in PDF or image form. The document is preprocessed and passed to a vision-assisted extraction stage. The extracted content is then normalized and presented for user verification. Once confirmed, the data are stored and used to recompute the student's aggregate metrics, risk score, and advisory knowledge base.
+
+\section{Document Preprocessing and Extraction}
+The extraction pipeline is designed around the practical difficulty of reading compact academic tables from real result sheets. PDF uploads are rendered at higher visual resolution before transmission to the vision model. Image uploads are upscaled when necessary so that small tabular text remains legible. Contrast and sharpness enhancement are applied to improve recognition of subject codes, grades, credits, and semester summary values.
+
+The extraction model is prompted to return structured JSON rather than free-form text. This reduces ambiguity in downstream processing and makes it easier to normalize grades, semester identifiers, and subject-level fields. A low temperature setting is used to make extraction more deterministic, while a higher output token limit prevents truncation for larger semesters containing many subjects.
+
+\section{Normalization and Human Verification}
+Once the model returns extracted content, the system performs normalization before persistence. This stage maps letter grades to the institutional grade-point scale, identifies backlog-indicating grades, and infers the semester number if it is not explicitly available in a clean field. The extracted information is then shown back to the student through a review screen so that any OCR or interpretation error can be corrected before the system writes the data to the database.
+
+\section{CGPA Computation}
+Let $\mathrm{SGPA}_i$ represent the semester grade point average for semester $i$, and let $C_i$ represent the credits registered in that semester. The cumulative GPA is computed as:
+\begin{equation}
+\mathrm{CGPA} = \frac{\sum_{i=1}^{n}\mathrm{SGPA}_i \cdot C_i}{\sum_{i=1}^{n} C_i}
+\end{equation}
+This weighted formulation is important because semester credit loads are not always uniform.
+
+\section{SARS Risk Score}
+The final risk score is computed as a weighted combination of GPA risk, backlog risk, and attendance risk:
+\begin{equation}
+\mathrm{SARS} = 0.40 \cdot R_{\mathrm{gpa}} + 0.35 \cdot R_{\mathrm{backlog}} + 0.25 \cdot R_{\mathrm{att}}
+\end{equation}
+The score is further adjusted using policy floor rules and semester trend behavior so that severe academic conditions are not understated by averaging effects.
+
+The GPA risk component is defined relative to the placement-readiness threshold:
+\begin{equation}
+R_{\mathrm{gpa}} = \max \left(0, \frac{7.5 - \mathrm{CGPA}}{7.5} \right) \cdot 100
+\end{equation}
+
+The attendance risk component is defined as:
+\begin{equation}
+R_{\mathrm{att}} = \max \left(0, \frac{75 - A_{\mathrm{avg}}}{75} \right) \cdot 100
+\end{equation}
+where $A_{\mathrm{avg}}$ is the average attendance percentage available for the student profile.
+
+\begin{table}[H]
+\centering
+\caption{Illustrative Backlog Risk Mapping}
+\begin{tabular}{cc}
+\toprule
+\textbf{Backlogs} & \textbf{Risk Points} \\
+\midrule
+0 & 0 \\
+1 & 40 \\
+2 & 60 \\
+3 & 80 \\
+4 & 90 \\
+5 or more & 100 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Trend Adjustment and Policy Floor Rules}
+The SARS model also accounts for the direction of academic momentum by comparing the latest SGPA with the previous semester. A sharp decline increases the GPA-related risk component, while a meaningful improvement reduces it slightly. This prevents the model from treating a transcript as a purely static snapshot.
+
+\begin{table}[H]
+\centering
+\caption{Placement Policy Floor Rules Used in SARS}
+\begin{tabular}{lll}
+\toprule
+\textbf{Condition} & \textbf{Minimum Level} & \textbf{Minimum Score} \\
+\midrule
+CGPA $< 5.0$ & High & 75 \\
+$5.0 \leq$ CGPA $< 7.0$ & Moderate & 50 \\
+$7.0 \leq$ CGPA $< 7.5$ & Watch & 25 \\
+Backlogs $\geq 3$ & High & 75 \\
+$1 \leq$ Backlogs $\leq 2$ & Moderate & 50 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Final SARS Risk Level Interpretation}
+\begin{tabular}{lll}
+\toprule
+\textbf{Score Range} & \textbf{Level} & \textbf{Meaning} \\
+\midrule
+0--24.9 & Low & On track \\
+25.0--49.9 & Watch & Attention needed \\
+50.0--74.9 & Moderate & Intervention recommended \\
+75.0--100.0 & High & Immediate action required \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Confidence Estimation}
+In addition to the SARS score, the system reports a confidence value representing evidential completeness rather than predictive certainty. Profiles with multiple semesters and attendance data receive higher confidence than sparse profiles with only a limited academic history. This design helps prevent over-interpretation and supports more responsible communication of academic risk.
+
+\section{OCR Review and Validation}
+The extraction pipeline is intentionally human-in-the-loop. The system does not directly persist raw OCR output. Instead, the extracted subject list, semester summary, and document metadata are displayed to the student for confirmation. This balances automation with correctness in a high-stakes educational setting.
+
+\section{RAG Advisory Pipeline}
+The advisory pipeline transforms academic data into typed knowledge chunks such as identity summary, risk summary, semester-wise performance, backlogs, attendance, and trajectory analysis. These chunks are embedded and stored in a vector database. For each advisory query, the system retrieves the most relevant evidence and generates a personalized response grounded in retrieved student data.
+
+\begin{table}[H]
+\centering
+\caption{Typed Knowledge Chunks Used in the Advisory Layer}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{0.22\textwidth} >{\raggedright\arraybackslash}p{0.34\textwidth} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Chunk Type} & \textbf{Typical Content} & \textbf{Primary Purpose} \\
+\midrule
+identity & Name, roll number, branch, CGPA summary & Overview and profile questions \\
+risk\_summary & SARS score, confidence, factor breakdown & Risk interpretation questions \\
+semester\_N & Subject grades, credits, SGPA & Semester-specific academic queries \\
+backlogs & Failed subjects and unresolved arrears & Remediation and backlog planning \\
+attendance & Attendance values and averages & Attendance compliance questions \\
+cgpa\_trajectory & Semester trend summary & Progress and what-if reasoning \\
+placement\_eligibility & Threshold comparison and disqualifiers & Placement-readiness queries \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\screenfigure{rag_pipeline_diagram.pdf}{RAG advisory pipeline showing chunking, embedding, retrieval, and grounded response generation.}{fig:rag-pipeline}
+
+\section{Retrieval and Generation Workflow}
+At query time, the student question is embedded using the same embedding model family used during indexing. Similarity search is then performed with student-level metadata filtering so that retrieval remains confined to the current student's academic record. Only a small number of the most relevant chunks are inserted into the advisory prompt. This improves efficiency, reduces prompt noise, and increases traceability.
+
+The generation layer is instructed to answer from retrieved evidence rather than from generic prior knowledge. A short rolling conversation history is included to preserve continuity without overwhelming the prompt context. The final response is returned together with source metadata so that the user can inspect what evidence informed the answer.
+
+\begin{algorithm}[H]
+\caption{SARS Recompute and Advisory Refresh Workflow}
+\begin{algorithmic}[1]
+\STATE Receive student update from upload, deletion, or attendance entry
+\STATE Validate authentication, role, and request payload
+\STATE Extract and normalize academic data if a new document was uploaded
+\STATE Present extracted values for user verification
+\STATE Persist verified records to the relational database
+\STATE Recompute CGPA, backlog status, attendance summary, and SARS score
+\STATE Refresh knowledge chunks and update vector store entries
+\STATE Return updated dashboard data and advisory-ready context
+\end{algorithmic}
+\end{algorithm}
+
+\section{Agentic Behaviors in SARS}
+Although SARS is not intended to operate as an autonomous decision-maker, it exhibits several bounded agentic behaviors. Re-indexing is automatic whenever academic data change. Risk recomputation is event-driven rather than manually requested. Advisory context is refreshed when the underlying student data become stale. These behaviors improve consistency while still preserving human oversight over final academic interpretation and intervention.
+
+\chapterclosing{This chapter translated the conceptual design of SARS into a transparent processing workflow covering extraction, validation, scoring, and advisory generation.}
